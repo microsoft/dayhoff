@@ -1,0 +1,62 @@
+import os
+
+# alignments = os.listdir('selected_alignments')
+# names = []
+# for alignment in alignments:
+#     with open(os.path.join("selected_alignments", alignment)) as f:
+#         lines = f.readlines()
+#         if len(lines) > 2:
+#             names.append(alignment[:-6])
+
+alignments = os.listdir('ccmgen_models')
+names = [a[:-8] for a in alignments]
+
+
+
+rule cat:
+    input: ["ccmgen_outputs_short/" + name + ".fasta" for name in names]
+    output: "ccmgen_short.fasta"
+    run:
+        with open(output[0], "w") as out_file:
+            for in_file in input:
+                with open(in_file) as f:
+                    _ = f.readline()
+                    seq = f.readlines()
+                    seq = "".join([s[:-1] for s in seq])
+                name = in_file.split("/")[1][:-6]
+                out_file.write(">" + name + "\n" + seq + "\n")
+
+
+rule ccmgen:
+    input: "single_sequences/{name}.fasta", "ccmgen_models_short/{name}.braw.gz"
+    output: "ccmgen_outputs_short/{name}.fasta"
+    conda: "ccmgen"
+    shell:
+        "ccmgen ccmgen_models_short/{wildcards.name}.braw.gz {output} --mcmc-sampling --alnfile single_sequences/{wildcards.name}.fasta --mcmc-sample-random-gapped --mcmc-burn-in 500 --num-sequences 1"
+
+
+rule get_56:
+    input: "selected_alignments/{name}.fasta"
+    output: "conditioning_sequences/{name}.fasta"
+    run:
+        with open(input[0]) as f_in, open(output[0], 'w') as f_out:
+            for i, line in enumerate(f_in):
+                if i == 57 * 2:
+                    break
+                f_out.write(line)
+
+
+rule get_first:
+    input: "selected_alignments/{name}.fasta"
+    output: "single_sequences/{name}.fasta"
+    shell:
+        "head -n 2 {input} > {output}"
+
+
+rule ccmpred:
+    input: "conditioning_sequences/{name}.fasta"
+    output: "ccmgen_models_short/{name}.braw.gz"
+    threads: 2
+    conda: "ccmgen"
+    shell:
+        "ccmpred {input} --no-logo --num-threads {threads} -b {output}"

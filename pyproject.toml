@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dayhoff"
+version = "0.1.0"
+description = "Python package for generation of protein sequences and evolutionary alignments via discrete diffusion models"
+readme = "README.md"
+requires-python = ">=3.10.16"
+license = "MIT"
+license-files = [
+"LICENSE"
+]
+authors = [
+    { name = "Kevin K. Yang", email = "kevyan@microsoft.com"},
+    { name = "Sarah A. Alamdari", email = "salamdari@microsoft.com"},
+    { name = "Alex J. Lee"},
+    { name = "Kaeli Kaymak-Loveless"},
+    { name = "Samir Char"},
+    { name = "Garyk Brixi"},
+    { name = "Carles Domingo-Enrich"},
+    { name = "Chentong Wang"},
+    { name = "Suyue Lyu"},
+    { name = "Nicolo Fusi"},
+    { name = "Neil Tenenholtz", email = "netenenh@microsoft.com"},    
+    { name = "Ava P. Amini", email = "ava.amini@microsoft.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    #"License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+# only the packages imported by dayhoff/:
+dependencies = [
+  "numpy>=1.26",
+  "torch>=2.7",
+  "transformers>=4.49",
+  "pandas>=2.3",
+  "biopython>=1.85",
+  "sequence-models>=1.8",
+  "scipy>=1.13",
+  "evodiff>=1.1",
+]
+
+[project.optional-dependencies]
+# everything else in your monorepo lives here
+full = [
+  "mdanalysis>=2.7",
+  "python-dotenv>=1.0",
+  "matplotlib>=3.10",
+  "seaborn>=0.13",
+  "h5py>=3.13",
+  "scikit-learn>=1.5",
+  "torch-geometric>=2.5",
+  "torch-scatter>=2.1",
+  "datasets>=3.2",
+  "blosum>=2.0",
+  "fair-esm>=2.0",
+  "evodiff>=1.1",
+  "pdb-tools>=2.5",
+  "wandb>=0.16",
+  "tqdm>=4.67",
+  "ijson>=3.3",
+  "pyfastx>=2.2",
+  "huggingface_hub>=0.27",
+  "azure-identity>=1.21",
+]
+
+[project.urls]
+Homepage = "https://github.com/microsoft/dayhoff"
+Repository = "https://github.com/microsoft/dayhoff"
+Issues = "https://github.com/microsoft/dayhoff/issues"
+HuggingFace = "https://huggingface.co/collections/microsoft/dayhoff-atlas-6866d679465a2685b06ee969"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dayhoff*"]
+
+[tool.setuptools.package-data]
+dayhoff = ["config/*"]
+
+[tool.flake8]
+max-line-length = 120
+ignore = ["E203"]
