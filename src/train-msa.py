@@ -3,24 +3,18 @@ import datetime
 import functools
 import json
 import os
-import random
-from typing import Optional, Tuple
+from typing import Tuple
 import time
 
-from evodiff.utils import Tokenizer
-from evodiff.metrics import MaskedAccuracyMSA
 import numpy as np
-from sequence_models.losses import MaskedCrossEntropyLossMSA
 from sequence_models.samplers import SortishSampler, ClusteredSortishSampler, ApproxBatchSampler
-from sequence_models.utils import warmup, transformer_lr
+from sequence_models.utils import transformer_lr
 import torch
 import torch.nn as nn
 import torch.distributed as dist
 from torch.distributed.fsdp import (
     BackwardPrefetch,
     FullyShardedDataParallel as FSDP,
-    FullOptimStateDictConfig,
-    FullStateDictConfig,
     ShardedOptimStateDictConfig,
     ShardedStateDictConfig,
     StateDictType,
@@ -31,25 +25,21 @@ from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 from torch.optim import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
-import wandb
-
-from dayhoff.activation_checkpointing import apply_activation_checkpointing
-from dayhoff.collators import MSAOAMaskCollator, MSAARCollator
-from dayhoff.constants import UL_ALPHABET_PLUS
-from dayhoff.datasets import OpenProteinDataset, UniRefDataset
-from dayhoff.model import ARDiffusionModel, _get_hf_model
-from dayhoff.samplers import ApproxBatchSamplerMSA
-from dayhoff.utils import cosine_anneal_with_warmup
-
-
 import torch.distributed as dist
 from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
 import torch.distributed.checkpoint as dcp
-from wandb import config
+import wandb
 
-# FLOP Profiler
-# from fvcore.nn import FlopCountAnalysis
-# from flops_profiler.profiler import FlopsProfiler
+
+from dayhoff.activation_checkpointing import apply_activation_checkpointing
+from dayhoff.collators import MSAARCollator
+from dayhoff.datasets import OpenProteinDataset, UniRefDataset
+from dayhoff.samplers import ApproxBatchSamplerMSA
+from dayhoff.utils import (cosine_anneal_with_warmup, load_msa_config_and_model,
+                           get_latest_dcp_checkpoint_path, seed_everything, load_checkpoint, save_checkpoint)
+
+
+
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
@@ -59,35 +49,6 @@ DEVICE = torch.device(f"cuda:{LOCAL_RANK}")
 OTHER_METRICS_KEY = "other_metrics"
 
 
-def load_msa_config_and_model(config_fpath):
-    with open(config_fpath, "r") as f:
-        config = json.load(f)
-    n_tokens = len(UL_ALPHABET_PLUS)
-
-    tokenizer = Tokenizer(protein_alphabet=UL_ALPHABET_PLUS)
-    accu_func = MaskedAccuracyMSA()
-    loss_func = MaskedCrossEntropyLossMSA(ignore_index=tokenizer.pad_id)
-    model_config = config["model_config"]
-    pretrained = model_config.pop("pretrained", False)
-    success = False
-    while not success:
-        try:
-            model = _get_hf_model(
-                "ai21labs/Jamba-v0.1",
-                tokenizer.pad_id,
-                pretrained=pretrained,
-                model_config=model_config,
-                trust_remote_code=True,
-            )
-            success = True
-        except FileNotFoundError:
-            pass
-    block = {type(layer) for layer in model.model.layers}
-    causal = True  # must be true for jamba
-    aux_loss_weight = config.get("aux_loss_weight", 0.0)
-    config["causal"] = causal  # save
-    model = ARDiffusionModel(model, aux_loss_weight=aux_loss_weight)
-    return config, tokenizer, model, block, causal
 
 
 def is_amlt():
@@ -253,108 +214,6 @@ def get_msa_dataloader(config, tokenizer, args):
     return dl_train
 
 
-def seed_everything(seed):
-    random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-
-
-def load_checkpoint(
-    model, optimizer, scheduler, ckpt_dir: str, last_step: int = -1, fast_forward=True
-) -> Tuple[int, int, int, int, int]:
-    ckpt_path = get_latest_dcp_checkpoint_path(ckpt_dir, last_step=last_step)
-    if ckpt_path:
-        print(f"Loading weights from {ckpt_path}...")
-        fs_storage_reader = torch.distributed.checkpoint.FileSystemReader(ckpt_path)
-
-        model_state_dict, optimizer_state_dict = get_state_dict(model, optimizer)
-        state_dict = {
-            "model_state_dict": model_state_dict,
-            "optimizer_state_dict": optimizer_state_dict,
-        }
-        dcp.load(
-            state_dict=state_dict,
-            storage_reader=fs_storage_reader,
-        )
-        # sets our state dicts on the model and optimizer, now that we've loaded
-        set_state_dict(
-            model,
-            optimizer,
-            model_state_dict=model_state_dict,
-            optim_state_dict=optimizer_state_dict,
-        )
-        if os.path.exists(os.path.join(ckpt_path, "scheduler%d.pt" %RANK)):
-            sd = torch.load(
-                os.path.join(ckpt_path, "scheduler%d.pt" %RANK), map_location=torch.device("cpu")
-            )
-        else:
-            sd = torch.load(
-                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
-            )
-        scheduler.load_state_dict(sd["scheduler_state_dict"])
-        epoch = sd["epoch"]
-        if "iterations" in sd:
-            its = sd["iterations"]
-        else:
-            its = 0
-            epoch += 100
-        if not fast_forward:
-            epoch = epoch + 102
-            its = 0
-        return epoch, sd["step"], sd["tokens"], sd["sequences"], its
-    else:
-        return 0, 0, 0, 0, 0
-
-
-def save_checkpoint(
-    out_dir: str,
-    model: nn.Module,
-    optimizer: torch.optim.Optimizer,
-    scheduler: torch.optim.lr_scheduler._LRScheduler,
-    step: int,
-    epoch: int,
-    tokens: int,
-    sequences: int,
-    iterations: int
-) -> None:
-    out_path = os.path.join(out_dir, f"dcp_{step}")
-    print(f"Saving checkpoint to {out_path}", RANK, flush=True)
-    model_state, optim_state = get_state_dict(model, optimizer)
-    sd = {
-        "model_state_dict": model_state,
-        "optimizer_state_dict": optim_state,
-    }
-    fs_storage_writer = torch.distributed.checkpoint.FileSystemWriter(out_path)
-    _ = dcp.save(sd, storage_writer=fs_storage_writer)
-    sched_state = scheduler.state_dict()
-    sd = {
-        "step": step,
-        "tokens": tokens,
-        "sequences": sequences,
-        "scheduler_state_dict": sched_state,
-        "epoch": epoch,
-        "iterations": iterations
-    }
-    torch.save(sd, os.path.join(out_path, "scheduler%d.pt" %RANK))
-
-
-def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Optional[str]:
-    ckpt_path = None
-    if last_step == -1:
-        print("last step")
-        for dir_name in os.listdir(ckpt_dir):
-            if "dcp" in dir_name:
-                step = int(dir_name.split("dcp_")[-1])
-                if step > last_step:
-                    ckpt_path = os.path.join(ckpt_dir, dir_name)
-                    last_step = step
-    else:
-        print("else")
-        ckpt_path = os.path.join(ckpt_dir, f"dcp_{last_step}")
-    return ckpt_path
-
 
 def epoch(
     model: nn.Module,
@@ -420,7 +279,8 @@ def epoch(
                 epoch=current_epoch,
                 tokens=total_tokens,
                 sequences=total_seq,
-                iterations=i
+                iterations=i,
+                rank=RANK
             )
         if args.cosine and total_steps == terminate_steps:
             return total_steps, total_tokens, total_seq
@@ -448,7 +308,7 @@ def train(args):
 
     if args.verbose:
         print("Initializing model...", RANK, flush=True)
-    config, tokenizer, model, block, causal = load_msa_config_and_model(
+    config, tokenizer, model, block = load_msa_config_and_model(
         args.config_fpath
     )
 
@@ -539,7 +399,7 @@ def train(args):
 
     # load state
     initial_epoch, total_steps, total_tokens, total_seqs, current_it = load_checkpoint(
-        model, optimizer, scheduler, args.out_fpath, args.last_step, fast_forward=args.no_msas
+        model, optimizer, scheduler, args.out_fpath, args.last_step, fast_forward=args.no_msas, rank=RANK
     )
     # override from config
     optimizer.param_groups[0]["lr"] = config["lr"] * lr_func(total_steps + 1)
