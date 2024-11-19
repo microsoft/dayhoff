@@ -5,7 +5,8 @@ from typing import Optional, Tuple
 
 import numpy as np
 import torch
-from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
+from torch.distributed.checkpoint.state_dict import (get_state_dict, set_state_dict,
+                                                     get_model_state_dict, set_model_state_dict)
 import torch.distributed.checkpoint as dcp
 import torch.nn as nn
 
@@ -58,7 +59,7 @@ def load_msa_config_and_model(config_fpath, alphabet=UL_ALPHABET_PLUS, use_flash
                 model_config=model_config,
                 trust_remote_code=True,
                 use_flash_attention_2=use_flash_attention_2,
-                alphabet=UL_ALPHABET_PLUS
+                alphabet=alphabet
             )
             success = True
         except FileNotFoundError:
@@ -117,32 +118,49 @@ def load_checkpoint(
     if ckpt_path:
         print(f"Loading weights from {ckpt_path}...")
         fs_storage_reader = torch.distributed.checkpoint.FileSystemReader(ckpt_path)
-
-        model_state_dict, optimizer_state_dict = get_state_dict(model, optimizer)
-        state_dict = {
-            "model_state_dict": model_state_dict,
-            "optimizer_state_dict": optimizer_state_dict,
-        }
-        dcp.load(
-            state_dict=state_dict,
-            storage_reader=fs_storage_reader,
-        )
-        # sets our state dicts on the model and optimizer, now that we've loaded
-        set_state_dict(
-            model,
-            optimizer,
-            model_state_dict=model_state_dict,
-            optim_state_dict=optimizer_state_dict,
-        )
+        if optimizer is not None:
+            model_state_dict, optimizer_state_dict = get_state_dict(model, optimizer)
+            state_dict = {
+                "model_state_dict": model_state_dict,
+                "optimizer_state_dict": optimizer_state_dict,
+            }
+            dcp.load(
+                state_dict=state_dict,
+                storage_reader=fs_storage_reader,
+            )
+            # sets our state dicts on the model and optimizer, now that we've loaded
+            set_state_dict(
+                model,
+                optimizer,
+                model_state_dict=model_state_dict,
+                optim_state_dict=optimizer_state_dict,
+            )
+        else:
+            model_state_dict = get_model_state_dict(model)
+            state_dict = {
+                "model_state_dict": model_state_dict,
+            }
+            dcp.load(
+                state_dict=state_dict,
+                storage_reader=fs_storage_reader,
+            )
+            # sets our state dicts on the model, now that we've loaded
+            set_model_state_dict(
+                model,
+                model_state_dict=model_state_dict
+            )
         if os.path.exists(os.path.join(ckpt_path, "scheduler%d.pt" %rank)):
             sd = torch.load(
                 os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu")
             )
-        else:
+        elif os.path.exists(os.path.join(ckpt_path, "scheduler.pt" %rank)):
             sd = torch.load(
                 os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
             )
-        scheduler.load_state_dict(sd["scheduler_state_dict"])
+        else:
+            return 0, 0, 0, 0, 0
+        if scheduler is not None:
+            scheduler.load_state_dict(sd["scheduler_state_dict"])
         epoch = sd["epoch"]
         if "iterations" in sd:
             its = sd["iterations"]
