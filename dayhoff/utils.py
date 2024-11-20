@@ -29,7 +29,6 @@ def cosine_anneal_with_warmup(n_warmup_steps, n_anneal_steps, final_ratio=0.0):
 def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Optional[str]:
     ckpt_path = None
     if last_step == -1:
-        print("last step")
         for dir_name in os.listdir(ckpt_dir):
             if "dcp" in dir_name:
                 step = int(dir_name.split("dcp_")[-1])
@@ -37,7 +36,6 @@ def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Option
                     ckpt_path = os.path.join(ckpt_dir, dir_name)
                     last_step = step
     else:
-        print("else")
         ckpt_path = os.path.join(ckpt_dir, f"dcp_{last_step}")
     return ckpt_path
 
@@ -153,7 +151,7 @@ def load_checkpoint(
             sd = torch.load(
                 os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu")
             )
-        elif os.path.exists(os.path.join(ckpt_path, "scheduler.pt" %rank)):
+        elif os.path.exists(os.path.join(ckpt_path, "scheduler.pt")):
             sd = torch.load(
                 os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
             )
