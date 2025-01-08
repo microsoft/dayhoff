@@ -97,7 +97,6 @@ def generate(args: argparse.Namespace) -> None:
         allowed_tokens += [UL_ALPHABET_PLUS.index(GAP)]
     allowed_tokens += [eos_id]
     seps = [SEP, START, STOP, END_UL, START_UL, END_AL, START_AL]
-    seps_regex = "|".join(seps)
     start = torch.tensor([[start_seq]]).to(DEVICE)
     start = torch.repeat_interleave(start, args.batch_size, dim=0)
     model.module.generation_config.eos_token_id = eos_id
@@ -109,6 +108,11 @@ def generate(args: argparse.Namespace) -> None:
     out_dir = os.path.join(args.out_fpath, args.model_name + '_' + str(total_steps) + "_" + task + '_t%.1f' %args.temp)
     if RANK == 0:
         os.makedirs(out_dir, exist_ok=True)
+    # if args.task == "sequence":
+    #     # wipe the output file
+    #     with open(os.path.join(out_dir, 'rank%d.fasta' % RANK), "w") as f:
+    #         pass
+
     for s in tqdm(range(args.n_generations // args.batch_size)):
         generated = model.module.generate(start, do_sample=True, logits_processor=[sup],
                                                  temperature=args.temp, num_beams=1, max_new_tokens=max_len,
@@ -117,7 +121,7 @@ def generate(args: argparse.Namespace) -> None:
         if args.task == "sequence":
             for n, unt in enumerate(untokenized):
                 n_gen = s * args.batch_size + n
-                print(unt, flush=True)
+                # print(unt, flush=True)
                 with open(os.path.join(out_dir, 'rank%d.fasta' %RANK), "a") as f:
                     f.write(">%d_%d\n" %(RANK, n_gen))
                     if args.start_rev:
