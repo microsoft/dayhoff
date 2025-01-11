@@ -9,8 +9,8 @@ from Bio.PDB import PDBParser
 #import esm
 import numpy as np
 import pandas as pd
-# from sequence_models.utils import parse_fasta
-# import torch
+from sequence_models.utils import parse_fasta
+import torch
 
 PATH_TO_PROTEINMPNN = "ProteinMPNN/"
 CWD = os.getcwd()
@@ -42,14 +42,14 @@ def get_esmif_perp(file):
     return perplexity
 
 
-def run_omegafold(input_fasta, output_dir):
+def run_omegafold(input_fasta, output_dir, subbatch_size=1024):
     if os.path.exists(input_fasta):
         subprocess.run(
             [
                 "omegafold",
                 input_fasta,
                 output_dir,
-                "--subbatch_size", str(1024) # optional?
+                "--subbatch_size", str(subbatch_size) # optional?
             ]
         )
 
@@ -130,6 +130,8 @@ def main():
     parser.add_argument("--restart", action="store_true")  # bypass running if/folding
     parser.add_argument("--fold_method", type=str, default='omegafold')
     parser.add_argument("--if_method", type=str, default='proteinmpnn')
+    parser.add_argument("--subbatch_size", type=int, default=1024)
+    
     args = parser.parse_args()
 
     if not os.path.exists(args.output_path):
@@ -143,7 +145,7 @@ def main():
         if args.fold_method == "esmfold":
             run_esmfold(args.path_to_input_fasta, pdb_path)
         elif args.fold_method == "omegafold":
-            run_omegafold(args.path_to_input_fasta, pdb_path)
+            run_omegafold(args.path_to_input_fasta, pdb_path, args.subbatch_size)
         else:
             print("PDBs already in output directory")
     else:
