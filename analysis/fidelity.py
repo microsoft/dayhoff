@@ -12,9 +12,13 @@ import pandas as pd
 from sequence_models.utils import parse_fasta
 import torch
 
+from transformers.models.esm.openfold_utils.protein import to_pdb, Protein as OFProtein
+from transformers.models.esm.openfold_utils.feats import atom14_to_atom37
+from transformers import AutoTokenizer, EsmForProteinFolding
+
 PATH_TO_PROTEINMPNN = "ProteinMPNN/"
 CWD = os.getcwd()
-
+import subprocess
 
 def get_bfactor(filename, chain="A"):
     parser = PDBParser(PERMISSIVE=1)
@@ -50,26 +54,67 @@ def run_omegafold(input_fasta, output_dir, subbatch_size=1024):
                 input_fasta,
                 output_dir,
                 "--subbatch_size", str(subbatch_size) # optional?
-            ]
+            ],check=True
         )
 
-def run_esmfold(model, sequence, output_dir, i):
-    with torch.no_grad():
-        output = model.infer_pdb(sequence)
+def convert_outputs_to_pdb(outputs):
+    final_atom_positions = atom14_to_atom37(outputs["positions"][-1], outputs)
+    outputs = {k: v.to("cpu").numpy() for k, v in outputs.items()}
+    final_atom_positions = final_atom_positions.cpu().numpy()
+    final_atom_mask = outputs["atom37_atom_exists"]
+    pdbs = []
+    for i in range(outputs["aatype"].shape[0]):
+        aa = outputs["aatype"][i]
+        pred_pos = final_atom_positions[i]
+        mask = final_atom_mask[i]
+        resid = outputs["residue_index"][i] + 1
+        pred = OFProtein(
+            aatype=aa,
+            atom_positions=pred_pos,
+            atom_mask=mask,
+            residue_index=resid,
+            b_factors=outputs["plddt"][i],
+            chain_index=outputs["chain_index"][i] if "chain_index" in outputs else None,
+        )
+        pdbs.append(to_pdb(pred))
+    return pdbs
 
-    with open(os.path.join(output_dir, str(i)+".pdb"), "w") as f:
-        f.write(output)
+def run_esmfold(input_fasta: str,
+                output_dir:str,
+                num_recycles:int = None, # num_recycles = None means max num_recycles
+                chunk_size: int = 64):
+    
+    if not os.path.exists(input_fasta):
+        raise FileNotFoundError(f"Input fasta file {input_fasta} not found.")
 
-# def run_esmfold(input_fasta, output_dir, NUM_RECYCLES=4):
-#     subprocess.run(
-#         [
-#             "esm-fold",
-#             "-i", input_fasta,
-#             "-o", output_dir,
-#             "--num-recycles", str(NUM_RECYCLES),
-#             #"--max-tokens-per-batch", MAX_TOKENS_PER_BATCH,
-#             #"--chunk-size", CHUNK_SIZE
-#         ])
+    # Parse fasta
+    seqs, seq_names = parse_fasta(input_fasta,return_names=True)
+    seq_ids = [seq_name.split()[0] for seq_name in seq_names] # In case record contains annotations, just keep sequence ID.
+
+    #Load model and set config
+    model = EsmForProteinFolding.from_pretrained("facebook/esmfold_v1")
+    model.eval()
+    model = model.cuda()
+
+    #Memory savings
+    model.esm = model.esm.half() #switch stem to half precision
+    torch.backends.cuda.matmul.allow_tf32 = True #allow TensorFloat32 computation if HW supports it.
+    model.trunk.set_chunk_size(chunk_size) # Lower chunk size = less memory but slower.
+
+    # Tokenize sequences
+    tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
+
+    # Could do batching, though I got inconsistent results and this seems fast while saving memory.
+    for seq_id,seq in zip(seq_ids,seqs):
+        inputs = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids'].cuda() 
+        with torch.no_grad():
+            outputs = model(inputs,num_recycles=num_recycles)
+
+        pdb = convert_outputs_to_pdb(outputs)
+
+        with open(os.path.join(output_dir,f"{seq_id}.pdb"), "w") as f:
+            f.write("".join(pdb))
+
 
 # def get_esmfold_bfactor(output_dir):
 #     struct = bsio.load_structure(os.path.join(output_dir, "result.pdb"), extra_fields=["b_factor"])
@@ -91,7 +136,7 @@ def run_inversefold(input_folder, output_folder, pdb_files, chain_id="A", temper
                         "--temperature", str(temperature),
                         "--num-samples",str(num_samples),
                         "--outpath", int_path,
-                    ]
+                    ],check=True
                 )
             if os.path.exists(input) and not os.path.exists(out_path):
                 subprocess.run(
@@ -102,7 +147,7 @@ def run_inversefold(input_folder, output_folder, pdb_files, chain_id="A", temper
                         out_path,
                         "--chain", chain_id,
                         "--outpath", out_path,
-                    ]
+                    ],check=True
                 )
         elif method == "mpnn":
             out_path = os.path.join(output_folder,str(i))
@@ -119,7 +164,7 @@ def run_inversefold(input_folder, output_folder, pdb_files, chain_id="A", temper
                         "--seed", str(37),
                         "--batch_size", str(1),
                         "--save_score", str(1),
-                    ]
+                    ],check=True
                 )
 
 
@@ -131,19 +176,22 @@ def main():
     parser.add_argument("--fold_method", type=str, default='omegafold')
     parser.add_argument("--if_method", type=str, default='proteinmpnn')
     parser.add_argument("--subbatch_size", type=int, default=1024)
+    parser.add_argument("--esmfold_num_recycles", type=int, default=None)
+    parser.add_argument("--esmfold_chunk_size", type=int, default=64)
     
     args = parser.parse_args()
+    
+    pdb_path = os.path.join(args.output_path, "pdb",args.fold_method) 
+    os.makedirs(pdb_path, exist_ok=True)
 
-    if not os.path.exists(args.output_path):
-        os.makedirs(args.output_path, exist_ok=True)
-    pdb_path = os.path.join(args.output_path, "pdb/") # str(args.fold_method) + "_pdb/"
-    if not os.path.exists(pdb_path):
-        os.makedirs(pdb_path, exist_ok=True)
-
-    # Run esmfold
+    # Run folding model
     if not os.listdir(pdb_path):  # only runs once
         if args.fold_method == "esmfold":
-            run_esmfold(args.path_to_input_fasta, pdb_path)
+            run_esmfold(input_fasta=args.path_to_input_fasta,
+                        output_dir=pdb_path,
+                        num_recycles=args.esmfold_num_recycles,
+                        chunk_size=args.esmfold_chunk_size)
+            
         elif args.fold_method == "omegafold":
             run_omegafold(args.path_to_input_fasta, pdb_path, args.subbatch_size)
         else:
