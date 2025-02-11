@@ -39,7 +39,7 @@ from dayhoff.constants import UL_ALPHABET_PLUS
 from dayhoff.datasets import OpenProteinDataset, UniRefDataset
 from dayhoff.model import ARDiffusionModel, _get_hf_model
 from dayhoff.samplers import ApproxBatchSamplerMSA
-from dayhoff.utils import cosine_anneal_with_warmup
+from dayhoff.utils import cosine_anneal_with_warmup, get_latest_dcp_checkpoint_path, seed_everything
 
 
 import torch.distributed as dist
@@ -253,14 +253,6 @@ def get_msa_dataloader(config, tokenizer, args):
     return dl_train
 
 
-def seed_everything(seed):
-    random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-
-
 def load_checkpoint(
     model, optimizer, scheduler, ckpt_dir: str, last_step: int = -1, fast_forward=True
 ) -> Tuple[int, int, int, int, int]:
@@ -339,21 +331,6 @@ def save_checkpoint(
     }
     torch.save(sd, os.path.join(out_path, "scheduler%d.pt" %RANK))
 
-
-def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Optional[str]:
-    ckpt_path = None
-    if last_step == -1:
-        print("last step")
-        for dir_name in os.listdir(ckpt_dir):
-            if "dcp" in dir_name:
-                step = int(dir_name.split("dcp_")[-1])
-                if step > last_step:
-                    ckpt_path = os.path.join(ckpt_dir, dir_name)
-                    last_step = step
-    else:
-        print("else")
-        ckpt_path = os.path.join(ckpt_dir, f"dcp_{last_step}")
-    return ckpt_path
 
 
 def epoch(

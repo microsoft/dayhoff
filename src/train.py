@@ -43,6 +43,7 @@ from dayhoff.model import (
     OTHER_METRICS_KEY,
 )
 from dayhoff.model import create_model
+from dayhoff.utils import load_checkpoint, seed_everything
 
 
 # default to a single-GPU setup if not present
@@ -183,14 +184,6 @@ def get_dataloader(
     return dl_train
 
 
-def seed_everything(seed: int) -> None:
-    random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-
-
 def step(
     model: nn.Module,
     batch: Sequence[torch.Tensor],
@@ -303,58 +296,6 @@ def epoch(
             )
 
     return total_steps, total_tokens, total_seq
-
-
-def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Optional[str]:
-    ckpt_path = None
-    if last_step == -1:
-        if not os.path.exists(ckpt_dir):
-            os.makedirs(ckpt_dir, exist_ok=True)
-        for dir_name in os.listdir(ckpt_dir):
-            if "dcp_" in dir_name:
-                step = int(dir_name.split("dcp_")[-1])
-                if step > last_step:
-                    ckpt_path = os.path.join(ckpt_dir, dir_name)
-                    last_step = step
-    else:
-        ckpt_path = os.path.join(ckpt_dir, f"dcp_{last_step}")
-    return ckpt_path
-
-
-def load_checkpoint(
-    model, optimizer, scheduler, ckpt_dir: str, last_step: int = -1
-) -> Tuple[int, int, int, int]:
-    ckpt_path = get_latest_dcp_checkpoint_path(ckpt_dir, last_step=last_step)
-    if ckpt_path:
-        print(f"Loading weights from {ckpt_path}...", flush=True)
-        fs_storage_reader = torch.distributed.checkpoint.FileSystemReader(ckpt_path)
-
-        model_state_dict, optimizer_state_dict = get_state_dict(model, optimizer)
-        state_dict = {
-            "model_state_dict": model_state_dict,
-            "optimizer_state_dict": optimizer_state_dict,
-        }
-        dcp.load(
-            state_dict=state_dict,
-            storage_reader=fs_storage_reader,
-        )
-        # sets our state dicts on the model and optimizer, now that we've loaded
-        set_state_dict(
-            model,
-            optimizer,
-            model_state_dict=model_state_dict,
-            optim_state_dict=optimizer_state_dict,
-        )
-
-        sd = torch.load(
-            os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
-        )
-        scheduler.load_state_dict(sd["scheduler_state_dict"])
-
-        # sequences must optionally return 0 for backwards compatibility with old checkpoints
-        return sd["epoch"] + 1, sd["step"], sd["tokens"], sd.get("sequences", 0)
-    else:
-        return 0, 0, 0, 0
 
 
 def train(args: argparse.Namespace) -> None:
