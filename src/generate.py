@@ -15,7 +15,7 @@ import torch
 
 from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
 from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
-from dayhoff.utils import (load_msa_config_and_model, get_latest_dcp_checkpoint_path,
+from dayhoff.utils import (load_msa_config_and_model,
                            load_checkpoint, seed_everything)
 
 
@@ -112,21 +112,28 @@ def generate(args: argparse.Namespace) -> None:
     #     # wipe the output file
     #     with open(os.path.join(out_dir, 'rank%d.fasta' % RANK), "w") as f:
     #         pass
-
+    unwritten_generations = []
+    unwritten_ns = []
     for s in tqdm(range(args.n_generations // args.batch_size)):
         generated = model.module.generate(start, do_sample=True, logits_processor=[sup],
                                                  temperature=args.temp, num_beams=1, max_new_tokens=max_len,
                                           use_cache=True)
         untokenized = [tokenizer.untokenize(g) for g in generated]
         if args.task == "sequence":
+
             for n, unt in enumerate(untokenized):
                 n_gen = s * args.batch_size + n
-                # print(unt, flush=True)
-                with open(os.path.join(out_dir, 'rank%d.fasta' %RANK), "a") as f:
-                    f.write(">%d_%d\n" %(RANK, n_gen))
-                    if args.start_rev:
-                        unt = unt[::-1]
-                    f.write(unt.replace(START, "").replace(STOP, "").replace(MSA_PAD, "") + "\n")
+                if args.start_rev:
+                    unt = unt[::-1]
+                unwritten_generations.append(unt)
+                unwritten_ns.append(n_gen)
+                if len(unwritten_generations) == 100:
+                    with open(os.path.join(out_dir, 'rank%d_seed%d.fasta' % (RANK, args.random_seed)), "a") as f:
+                        for uwg, nwn in zip(unwritten_generations, unwritten_ns):
+                            f.write(">%d_%d_%d\n" % (RANK, nwn, args.random_seed))
+                            f.write(uwg.replace(START, "").replace(STOP, "").replace(MSA_PAD, "") + "\n")
+                        unwritten_generations = []
+                        unwritten_ns = []
         else:
             for n, unt in enumerate(untokenized):
                 n_gen = s * args.batch_size + n
