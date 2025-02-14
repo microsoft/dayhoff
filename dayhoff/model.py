@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from transformers import AutoModelForCausalLM, AutoConfig, PreTrainedModel
 
-from dayhoff.constants import MSA_ALPHABET_PLUS, TaskType
+from dayhoff.constants import UL_ALPHABET_PLUS, TaskType
 from dayhoff.losses import OAMaskedCrossEntropyLoss
 from huggingface_hub import PyTorchModelHubMixin
 
@@ -121,6 +121,13 @@ class ARDiffusionModel(nn.Module,PyTorchModelHubMixin):
         }
         return outputs
 
+    def inference(self, src: torch.Tensor) -> torch.Tensor:
+        self.module.eval()
+        with torch.inference_mode():
+            output = self.module(src)
+        output = output["logits"]
+        return output
+
 
 class MSAModelWithMetrics(nn.Module,PyTorchModelHubMixin):
     """
@@ -214,7 +221,7 @@ def _create_bytenet(
     if pretrained:
         raise ValueError("Pretrained models not supported for ByteNet")
 
-    n_tokens = len(MSA_ALPHABET_PLUS)
+    n_tokens = len(UL_ALPHABET_PLUS)
     d_embed = model_config["d_embed"]
     d_model = model_config["d_model"]
     n_layers = model_config["n_layers"]
@@ -251,6 +258,8 @@ def _get_hf_model(
     model_config: Optional[dict] = None,
     pretrained: bool = False,
     trust_remote_code: bool = False,
+    use_flash_attention_2: bool = False,
+    alphabet=UL_ALPHABET_PLUS
 ) -> nn.Module:
     if model_config and pretrained:
         # can't overwrite the config of a pretrained model
@@ -284,19 +293,19 @@ def _get_hf_model(
 
         # ensure the vocab size is a multiple of 8 to maximize tensor core utilization
         model_config["vocab_size"] = (
-            np.ceil(len(MSA_ALPHABET_PLUS) / 8).astype(int).item() * 8
+            np.ceil(len(alphabet) / 8).astype(int).item() * 8
         )
         # TODO: This could be bad if alphabet gets bigger
-        model_config["pad_token_id"] = MSA_ALPHABET_PLUS.index(
+        model_config["pad_token_id"] = alphabet.index(
             MSA_PAD
         )  # FIXME: MSA_PAD or pad_token_id (which is mask_id in bytenet
-        model_config["bos_token_id"] = MSA_ALPHABET_PLUS.index(START)
-        model_config["eos_token_id"] = MSA_ALPHABET_PLUS.index(STOP)
+        model_config["bos_token_id"] = alphabet.index(START)
+        model_config["eos_token_id"] = alphabet.index(STOP)
 
         # merge the updates into the default config
         config = type(config).from_dict({**config.to_dict(), **model_config})
         model = AutoModelForCausalLM.from_config(
-            config, trust_remote_code=trust_remote_code
+            config, trust_remote_code=trust_remote_code, use_flash_attention_2=use_flash_attention_2
         )
     return model
 

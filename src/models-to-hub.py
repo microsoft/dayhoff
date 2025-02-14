@@ -59,17 +59,16 @@ def push_to_hub(args: argparse.Namespace) -> None:
             logger.info(f"Model variant {model_variant} already exists in output directory and cache = True. Skipping.")
             continue
 
-        #TODO: add code block to download checkpoint from storage
+        #TODO: could add code block to download checkpoint from storage
 
         #Load model checkpoint and tokenizer
-        config, _, model, _, _ = load_msa_config_and_model(os.path.join(in_dir, "config.json"))
-        optimizer = Adam(model.parameters(), lr=config["lr"], weight_decay=0)
-        lr_func = transformer_lr(max(config["warmup_steps"], 1))
-        scheduler = LambdaLR(optimizer, lr_func)
+        
+        config, _, model, _ = load_msa_config_and_model(os.path.join(in_dir, "config.json"))
         _ = load_checkpoint(
-            model, optimizer, scheduler, in_dir, args.checkpoint_step
+        model, None, None, in_dir, args.checkpoint_step, rank=RANK
         )
-        model = model.module # Remove MSAModelWithMetrics wrapper
+        
+        model = model.module # Remove ARDiffusionModel wrapper
         model = model.to(DEVICE)
 
         

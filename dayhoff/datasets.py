@@ -89,6 +89,19 @@ def msa_subsampling(sliced_msa, n_sequences, selection_type):
     return msa_sequences, random_idx  # Returns aligned sequences and their indices
 
 
+class ListDataset(Dataset):
+
+    def __init__(self, data):
+        super().__init__()
+        self.data = data
+
+    def __getitem__(self, item):
+        return (self.data[item], )
+
+    def __len__(self):
+        return len(self.data)
+
+
 class UniRefDataset(Dataset):
     """
     Dataset that pulls from UniRef/Uniclust downloads.
@@ -197,6 +210,30 @@ class OpenProteinDataset(Dataset):
         self.indices = metadata.index.values.tolist()
         self.depths = metadata["depth"].values.tolist()
         self.lengths = metadata["length"].values.tolist()
+        if split == "rtest":
+            exclude = [
+                "alignments_41/B8KZ16/merged.a3m",
+                "alignments_41/A0A1V6BYG1/merged.a3m",
+                "alignments_41/A3T2H5/merged.a3m",
+                "alignments_41/C0CU71/merged.a3m",
+                "alignments_41/U6L0S1/merged.a3m",
+                "alignments_41/A0A2D3P9P4/merged.a3m",
+                "alignments_41/C4YSB1/merged.a3m",
+                "alignments_41/W2Z7Y7/merged.a3m",
+                "alignments_41/A0A1G2B126/merged.a3m",
+                "alignments_41/A0A233HTX8/merged.a3m"
+            ]
+            keep_idx = []
+            for i, fn in enumerate(self.filenames):
+                for exc in exclude:
+                    if exc in fn:
+                        break
+                else:
+                    keep_idx.append(i)
+            self.filenames = [self.filenames[i] for i in keep_idx]
+            self.indices = [self.indices[i] for i in keep_idx]
+            self.depths = [self.depths[i] for i in keep_idx]
+            self.lengths = [self.lengths[i] for i in keep_idx]
         self.n_sequences = n_sequences
         self.max_seq_len = max_seq_len
         self.selection_type = selection_type

@@ -4,19 +4,22 @@ import os
 
 MASK = "#"
 MSA_PAD = "!"
-MSA_ALPHABET_PLUS = "ACDEFGHIKLMNPQRSTVWYBZXJOU-*#@!/_()[]"
+UL_ALPHABET_PLUS = "ACDEFGHIKLMNPQRSTVWYBZXJOU-*#@!/[]{}"
 MSA_AAS = "ACDEFGHIKLMNPQRSTVWYBZXJOU-"
 GAP = "-"
 START = "@"
 STOP = "*"
 SEP = "/"
 END_AL = "]"
+END_UL = "}"
+START_AL = "["
+START_UL = "{"
 
 class ProteinTokenizer(PreTrainedTokenizer):
 
     def __init__(
         self,
-        protein_alphabet: str = MSA_ALPHABET_PLUS,
+        protein_alphabet: str = UL_ALPHABET_PLUS,
         model_max_length: int = 2048,
         pad_token=MSA_PAD,
         mask_token=MASK,

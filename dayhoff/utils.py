@@ -1,21 +1,18 @@
-import numpy as np
-import logging
-
 import json
 import os
 import random
-import torch
 from typing import Optional, Tuple
+import logging
+import numpy as np
+import torch
+from torch.distributed.checkpoint.state_dict import (get_state_dict, set_state_dict,
+                                                     get_model_state_dict, set_model_state_dict)
 import torch.distributed.checkpoint as dcp
-from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
+import torch.nn as nn
 
-from esm.modules import AxialTransformerLayer
 from evodiff.utils import Tokenizer
-from evodiff.metrics import MaskedAccuracyMSA
-from sequence_models.esm import MSATransformer
-from sequence_models.losses import MaskedCrossEntropyLossMSA
-from dayhoff.constants import MSA_ALPHABET_PLUS, END_AL
-from dayhoff.model import MSAModelWithMetrics, _get_hf_model
+from dayhoff.model import _get_hf_model, ARDiffusionModel
+from dayhoff.constants import UL_ALPHABET_PLUS
 
 
 def cosine_anneal_with_warmup(n_warmup_steps, n_anneal_steps, final_ratio=0.0):
@@ -28,8 +25,49 @@ def cosine_anneal_with_warmup(n_warmup_steps, n_anneal_steps, final_ratio=0.0):
             return final_ratio + 0.5 * (1 - final_ratio) * (1 + np.cos((step - n_warmup_steps) * np.pi / n_anneal_steps))
     return get_lr
 
+def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Optional[str]:
+    ckpt_path = None
+    if last_step == -1:
+        for dir_name in os.listdir(ckpt_dir):
+            if "dcp" in dir_name:
+                step = int(dir_name.split("dcp_")[-1])
+                if step > last_step:
+                    ckpt_path = os.path.join(ckpt_dir, dir_name)
+                    last_step = step
+    else:
+        ckpt_path = os.path.join(ckpt_dir, f"dcp_{last_step}")
+    return ckpt_path
 
-def seed_everything(seed: int) -> None:
+
+def load_msa_config_and_model(config_fpath, alphabet=UL_ALPHABET_PLUS, use_flash_attention_2=True):
+    with open(config_fpath, "r") as f:
+        config = json.load(f)
+
+    tokenizer = Tokenizer(protein_alphabet=alphabet)
+    model_config = config["model_config"]
+    pretrained = model_config.pop("pretrained", False)
+    success = False
+    while not success:
+        try:
+            model = _get_hf_model(
+                "ai21labs/Jamba-v0.1",
+                tokenizer.pad_id,
+                pretrained=pretrained,
+                model_config=model_config,
+                trust_remote_code=True,
+                use_flash_attention_2=use_flash_attention_2,
+                alphabet=alphabet
+            )
+            success = True
+        except FileNotFoundError:
+            pass
+    block = {type(layer) for layer in model.model.layers}
+    aux_loss_weight = config.get("aux_loss_weight", 0.0)
+    model = ARDiffusionModel(model, aux_loss_weight=aux_loss_weight)
+    return config, tokenizer, model, block
+
+
+def seed_everything(seed):
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
@@ -37,113 +75,101 @@ def seed_everything(seed: int) -> None:
     torch.cuda.manual_seed(seed)
 
 
-def load_base_model(config_fpath):
-    with open(config_fpath, "r") as f:
-        config = json.load(f)
-    n_tokens = len(MSA_ALPHABET_PLUS)
-
-    tokenizer = Tokenizer(protein_alphabet=MSA_ALPHABET_PLUS)
-    if config["model_type"] == "jamba":
-        model_config = config["model_config"]
-        pretrained = model_config.pop("pretrained", False)
-        model = _get_hf_model(
-            "ai21labs/Jamba-v0.1",
-            tokenizer.pad_id,
-            pretrained=pretrained,
-            model_config=model_config,
-            trust_remote_code=True,
-        )
-        block = {type(layer) for layer in model.model.layers}
-        causal = True  # must be true for jamba
-    elif config["model_type"] == "msa_transformer":
-        n_layers = config["n_layers"]
-        d_hidden = config["d_hidden"]
-        n_heads = config["n_heads"]
-        d_embed = config["d_embed"]
-        tie_weights = config.get("tie_weights", 0.0)  # true if not empty
-        print("tie_weights", tie_weights)
-        # config["tie_weights"] = tie_weights  # save
-        model = MSATransformer(
-            d_embed,
-            d_hidden,
-            n_layers,
-            n_heads,
-            use_ckpt=True,
-            n_tokens=n_tokens,
-            padding_idx=tokenizer.pad_id,
-            mask_idx=tokenizer.mask_id,
-            tie_weights=tie_weights,
-        )
-        block = {AxialTransformerLayer}
-        causal = config.get("causal", False)  # true if not empty
-    else:
-        raise Exception("Unknown model: {}".format(config["model"]))
-
-    return config, tokenizer, model, block, causal
-
-def load_msa_config_and_model(config_fpath):
-    config, tokenizer, model, block, causal = load_base_model(config_fpath)
-    accu_func = MaskedAccuracyMSA()
-    loss_func = MaskedCrossEntropyLossMSA(ignore_index=tokenizer.pad_id)
-
-    aux_loss_weight = config.get("aux_loss_weight", 0.0)
-    config["causal"] = causal  # save
-    model = MSAModelWithMetrics(
-        model,
-        loss_func,
-        accu_func,
-        tokenizer.pad_id,
-        tokenizer,
-        aux_loss_weight=aux_loss_weight,
-        model_type=config["model_type"],
-    )
-    return config, tokenizer, model, block, causal
+def save_checkpoint(
+    out_dir: str,
+    model: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler._LRScheduler,
+    step: int,
+    epoch: int,
+    tokens: int,
+    sequences: int,
+    iterations: int,
+        rank: int
+) -> None:
+    out_path = os.path.join(out_dir, f"dcp_{step}")
+    print(f"Saving checkpoint to {out_path}", rank, flush=True)
+    model_state, optim_state = get_state_dict(model, optimizer)
+    sd = {
+        "model_state_dict": model_state,
+        "optimizer_state_dict": optim_state,
+    }
+    fs_storage_writer = torch.distributed.checkpoint.FileSystemWriter(out_path)
+    _ = dcp.save(sd, storage_writer=fs_storage_writer)
+    sched_state = scheduler.state_dict()
+    sd = {
+        "step": step,
+        "tokens": tokens,
+        "sequences": sequences,
+        "scheduler_state_dict": sched_state,
+        "epoch": epoch,
+        "iterations": iterations
+    }
+    torch.save(sd, os.path.join(out_path, "scheduler%d.pt" %rank))
 
 
-def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Optional[str]:
-    ckpt_path = None
-    if last_step == -1:
-        if not os.path.exists(ckpt_dir):
-            os.makedirs(ckpt_dir, exist_ok=True)
-        print("last step")
-        for dir_name in os.listdir(ckpt_dir):
-            if "dcp_" in dir_name:
-                step = int(dir_name.split("dcp_")[-1])
-                if step > last_step:
-                    ckpt_path = os.path.join(ckpt_dir, dir_name)
-                    last_step = step
-    else:
-        print("else")
-        ckpt_path = os.path.join(ckpt_dir, f"dcp_{last_step}")
-    return ckpt_path
-
-
-def load_checkpoint(model, optimizer, scheduler, ckpt_dir: str, last_step: int = -1) -> Tuple[int, int, int, int]:
+def load_checkpoint(
+    model, optimizer, scheduler, ckpt_dir: str, last_step: int = -1, fast_forward=True, rank: int = 0
+) -> Tuple[int, int, int, int, int]:
     ckpt_path = get_latest_dcp_checkpoint_path(ckpt_dir, last_step=last_step)
-    print(ckpt_path)
     if ckpt_path:
         print(f"Loading weights from {ckpt_path}...")
         fs_storage_reader = torch.distributed.checkpoint.FileSystemReader(ckpt_path)
-
-        model_state_dict, optimizer_state_dict = get_state_dict(model, optimizer)
-        state_dict = {"model_state_dict": model_state_dict, "optimizer_state_dict": optimizer_state_dict}
-        dcp.load(
-            state_dict=state_dict,
-            storage_reader=fs_storage_reader,
-        )
-        # sets our state dicts on the model and optimizer, now that we've loaded
-        set_state_dict(model, optimizer, model_state_dict=model_state_dict, optim_state_dict=optimizer_state_dict)
-        checkpoint_path = os.path.join(ckpt_path, "scheduler.pt")
-        if os.path.exists(os.path.join(ckpt_path, "scheduler0.pt")):
-            checkpoint_path = os.path.join(ckpt_path, "scheduler0.pt")
-        sd = torch.load(checkpoint_path, map_location=torch.device("cpu"))
-        scheduler.load_state_dict(sd["scheduler_state_dict"])
-
-        # sequences must optionally return 0 for backwards compatibility with old checkpoints
-        return sd["epoch"] + 1, sd["step"], sd["tokens"], sd.get("sequences", 0)
+        if optimizer is not None:
+            model_state_dict, optimizer_state_dict = get_state_dict(model, optimizer)
+            state_dict = {
+                "model_state_dict": model_state_dict,
+                "optimizer_state_dict": optimizer_state_dict,
+            }
+            dcp.load(
+                state_dict=state_dict,
+                storage_reader=fs_storage_reader,
+            )
+            # sets our state dicts on the model and optimizer, now that we've loaded
+            set_state_dict(
+                model,
+                optimizer,
+                model_state_dict=model_state_dict,
+                optim_state_dict=optimizer_state_dict,
+            )
+        else:
+            model_state_dict = get_model_state_dict(model)
+            state_dict = {
+                "model_state_dict": model_state_dict,
+            }
+            dcp.load(
+                state_dict=state_dict,
+                storage_reader=fs_storage_reader,
+            )
+            # sets our state dicts on the model, now that we've loaded
+            set_model_state_dict(
+                model,
+                model_state_dict=model_state_dict
+            )
+        if os.path.exists(os.path.join(ckpt_path, "scheduler%d.pt" %rank)):
+            sd = torch.load(
+                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu")
+            )
+        elif os.path.exists(os.path.join(ckpt_path, "scheduler.pt")):
+            sd = torch.load(
+                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
+            )
+        else:
+            return 0, 0, 0, 0, 0
+        if scheduler is not None:
+            scheduler.load_state_dict(sd["scheduler_state_dict"])
+        epoch = sd["epoch"]
+        if "iterations" in sd:
+            its = sd["iterations"]
+        else:
+            its = 0
+            epoch += 100
+        if not fast_forward:
+            epoch = epoch + 102
+            its = 0
+        return epoch, sd["step"], sd["tokens"], sd["sequences"], its
     else:
-        return 0, 0, 0, 0
-
+        return 0, 0, 0, 0, 0
 
 def get_logger():
     # Create a custom logger

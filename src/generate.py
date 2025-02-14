@@ -1,13 +1,13 @@
 import argparse
 import os
-import torch
-import torch.distributed as dist
 from tqdm import tqdm
-from torch.optim import Adam
-from torch.optim.lr_scheduler import LambdaLR
-from dayhoff.constants import MSA_ALPHABET_PLUS, END_AL
-from dayhoff.utils import seed_everything, load_checkpoint, load_msa_config_and_model
-from sequence_models.utils import transformer_lr
+from transformers import SuppressTokensLogitsProcessor
+import torch
+from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
+from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
+from dayhoff.utils import (load_msa_config_and_model,
+                           load_checkpoint, seed_everything)
+
 
 # default to a single-GPU setup if not present
 if "RANK" not in os.environ and "WORLD_SIZE" not in os.environ:
@@ -22,101 +22,155 @@ WORLD_SIZE = int(os.environ["WORLD_SIZE"])
 DEVICE = torch.device(f"cuda:{RANK}")
 print("device", DEVICE)
 
+
+
 def generate(args: argparse.Namespace) -> None:
     #print(f"Starting job on rank {RANK} with local rank {LOCAL_RANK} and world size {WORLD_SIZE}")
-    seed_everything(args.random_seed)
-    dist.init_process_group(backend="nccl")
-    #if args.verbose:
-        #print("Initializing model...", RANK)
+    seed_everything(args.random_seed + RANK)
 
     # load model parameters from config file
-    config, tokenizer, model, block, causal = load_msa_config_and_model(os.path.join(args.in_fpath, "config.json"))
-    #if args.verbose:
-        #print("Done initializing model.", RANK)
-    lr = config["lr"]
-    weight_decay = 0  # filler , doesnt matter
-    optimizer = Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    warmup_steps = max(config["warmup_steps"], 1)
-    lr_func = transformer_lr(warmup_steps)
-    scheduler = LambdaLR(optimizer, lr_func)
+    config, tokenizer, model, block = load_msa_config_and_model(os.path.join(args.in_fpath, "config.json"),
+                                                                use_flash_attention_2=True)
+    if args.verbose:
+        print("Done initializing model.", RANK)
 
     # Load model and optimizer onto CPU
-    _ = load_checkpoint(
-        model, optimizer, scheduler, args.in_fpath, args.checkpoint_step
+    _, total_steps, _, _, _ = load_checkpoint(
+        model, None, None, args.in_fpath, args.checkpoint_step, rank=RANK
     )
     # Move only model to GPU
     model = model.to(DEVICE)
-
+    model = model.to(torch.bfloat16)
+    all_tokens = list(range(40))
+    allowed_tokens = [UL_ALPHABET_PLUS.index(aa) for aa in CAN_AAS]
     if args.task == "sequence":
         if args.start_rev:
-            start = tokenizer.stop_id
-            stop = tokenizer.start_id
+            start_seq = tokenizer.stop_id
+            eos_id = int(tokenizer.start_id)
         else:
-            start = tokenizer.start_id
-            stop = tokenizer.stop_id
-        max_len = args.max_len
-    elif args.task == "msa":
-        start = tokenizer.start_id
-        stop = tokenizer.tokenize(END_AL)
-        max_len = args.msa_n_seqs * args.msa_max_seq_len
-
-    untokenized_out = []
-
-    for s in tqdm(range(args.n_generations)):
-        if args.verbose:
-            print(MSA_ALPHABET_PLUS)
-            print(tokenizer.a_to_i)
-            print(tokenizer.i_to_a)
-        # Start from START token
-        batch_size = 1
-        sample = torch.full((batch_size, 1), start, dtype=torch.long).to(DEVICE)
-
-        # Iterate over each residue until STOP or max length
-        reach_stop = False  # initialize
-        for _ in tqdm(range(max_len + 1)): # Adding 1 to account for the start token
-            if reach_stop == False:  # Add residues until it predicts STOP token or hits max seq len
-                prediction = model.inference(sample)
-                p = prediction[:, -1, : len(MSA_ALPHABET_PLUS)]  # predict next token
-                p = torch.nn.functional.softmax(p / args.temp, dim=1)  # exp
-                p_sample = torch.multinomial(p, num_samples=1).to(DEVICE)
-                sample = torch.cat((sample, p_sample), dim=1)
-                if args.verbose:
-                    print(tokenizer.untokenize(sample[0]))
-                if p_sample == stop:
-                    reach_stop = True
-            else:
-                break
-        # print(sample)
-        untokenized = tokenizer.untokenize(sample[0])
-        print("final sequence: ", untokenized)
+            start_seq = tokenizer.start_id
+            eos_id = int(tokenizer.stop_id)
+        max_len = config["max_len"]
+    elif args.task == "gap_no_query":
         if args.start_rev:
-            untokenized_out.append(untokenized[::-1])  # append forward sequence
-            # print("fixed", untokenized[::-1])
+            start_seq = UL_ALPHABET_PLUS.index(END_AL)
+            eos_id = UL_ALPHABET_PLUS.index(START_AL)
         else:
-            untokenized_out.append(untokenized)
+            start_seq = UL_ALPHABET_PLUS.index(START_AL)
+            eos_id = UL_ALPHABET_PLUS.index(END_AL)
+        max_len = config["n_sequences"] * config["max_seq_len"]
+    elif args.task == "indel_no_query":
+        if args.start_rev:
+            start_seq = UL_ALPHABET_PLUS.index(END_UL)
+            eos_id = UL_ALPHABET_PLUS.index(START_UL)
+        else:
+            start_seq = UL_ALPHABET_PLUS.index(START_UL)
+            eos_id = UL_ALPHABET_PLUS.index(END_UL)
+        max_len = config["n_sequences"] * config["max_seq_len"]
+    elif args.task == "gap_query":
+        max_len = config["n_sequences"] * config["max_seq_len"]
+        if args.start_rev:
+            start_seq = UL_ALPHABET_PLUS.index(STOP)
+            eos_id = UL_ALPHABET_PLUS.index(START_AL)
+            all_tokens += [UL_ALPHABET_PLUS.index(START), UL_ALPHABET_PLUS.index(END_AL)]
+        else:
+            start_seq = UL_ALPHABET_PLUS.index(START)
+            eos_id = UL_ALPHABET_PLUS.index(END_AL)
+            all_tokens += [UL_ALPHABET_PLUS.index(STOP), UL_ALPHABET_PLUS.index(START_AL)]
+    elif args.task == "indel_query":
+        max_len = config["n_sequences"] * config["max_seq_len"]
+        if args.start_rev:
+            start_seq = UL_ALPHABET_PLUS.index(STOP)
+            eos_id = UL_ALPHABET_PLUS.index(START_UL)
+            all_tokens += [UL_ALPHABET_PLUS.index(START), UL_ALPHABET_PLUS.index(END_UL)]
+        else:
+            start_seq = UL_ALPHABET_PLUS.index(START)
+            eos_id = UL_ALPHABET_PLUS.index(END_UL)
+            all_tokens += [UL_ALPHABET_PLUS.index(STOP), UL_ALPHABET_PLUS.index(START_UL)]
+    if "gap" in args.task or "indel" in args.task:
+        allowed_tokens += [UL_ALPHABET_PLUS.index(SEP)]
+    if "gap" in args.task:
+        allowed_tokens += [UL_ALPHABET_PLUS.index(GAP)]
+    allowed_tokens += [eos_id]
+    seps = [SEP, START, STOP, END_UL, START_UL, END_AL, START_AL]
+    start = torch.tensor([[start_seq]]).to(DEVICE)
+    start = torch.repeat_interleave(start, args.batch_size, dim=0)
+    model.module.generation_config.eos_token_id = eos_id
+    sup = SuppressTokensLogitsProcessor([t for t in all_tokens if not t in allowed_tokens], device=DEVICE)
+    if args.start_rev:
+        task = args.task + ".rev"
+    else:
+        task = args.task + ".fwd"
+    out_dir = os.path.join(args.out_fpath, args.model_name + '_' + str(total_steps) + "_" + task + '_t%.1f' %args.temp)
+    if RANK == 0:
+        os.makedirs(out_dir, exist_ok=True)
+    # if args.task == "sequence":
+    #     # wipe the output file
+    #     with open(os.path.join(out_dir, 'rank%d.fasta' % RANK), "w") as f:
+    #         pass
+    unwritten_generations = []
+    unwritten_ns = []
+    #
+    for s in tqdm(range(args.n_generations // args.batch_size)):
+        generated = model.module.generate(start, do_sample=True, logits_processor=[sup],
+                                                 temperature=args.temp, num_beams=1, max_new_tokens=max_len,
+                                          use_cache=True)
+        untokenized = [tokenizer.untokenize(g) for g in generated]
         if args.task == "sequence":
-            with open(args.out_fpath + "/generated_samples.fasta", "a") as f:
-                f.write(">3BCOOLED_SEQUENCE_" + str(s) + "\n" + str(untokenized[1:-1]) + "\n")
 
-    #destroy process group
-    dist.destroy_process_group()
+            for n, unt in enumerate(untokenized):
+                n_gen = s * args.batch_size + n
+                if args.start_rev:
+                    unt = unt[::-1]
+                unwritten_generations.append(unt)
+                unwritten_ns.append(n_gen)
+                # save every 100 generations or last in case n_generations is less than 100 or not a multiple of 100
+                if len(unwritten_generations) == 100 or s == args.n_generations // args.batch_size - 1: 
+                    with open(os.path.join(out_dir, 'rank%d_seed%d.fasta' % (RANK, args.random_seed)), "a") as f:
+                        for uwg, nwn in zip(unwritten_generations, unwritten_ns):
+                            f.write(">%d_%d_%d\n" % (RANK, nwn, args.random_seed))
+                            f.write(uwg.replace(START, "").replace(STOP, "").replace(MSA_PAD, "") + "\n")
+                        unwritten_generations = []
+                        unwritten_ns = []
+        else:
+            for n, unt in enumerate(untokenized):
+                n_gen = s * args.batch_size + n
+                with open(os.path.join(out_dir, 'rank%d_%d.fasta' %(RANK, n_gen)), "w") as f:
+                    unt = unt.replace(MSA_PAD, "")[1:-1] # Strip out whatever stop and start
+                    # Replace all things in the middle with new lines
+                    for sep in seps:
+                        unt = unt.replace(sep, " ")
+                    unt = unt.split()
+                    for i, seq in enumerate(unt):
+                        f.write(">%d\n" %i)
+                        if args.start_rev:
+                            seq = seq[::-1]
+                        f.write(seq + "\n")
+                        print(">%d" %i)
+                        print(seq, flush=True)
+
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("in_fpath", type=str)  # location of checkpoint
-    parser.add_argument("--out_fpath", type=str)  # location to write to
+    parser.add_argument("out_fpath", type=str)  # location to write to
+    parser.add_argument("model_name", type=str)
+    parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--checkpoint_step", type=int, default=-1)
-    parser.add_argument("--max-len", type=int, default=2048)
-    parser.add_argument("--msa-max-seq-len", type=int, default=512)
-    parser.add_argument("--msa-n-seqs", type=int, default=64)
     parser.add_argument("--n_generations", type=int, default=100)
     parser.add_argument("--task", type=str, default="sequence")  # 'sequence' or 'msa'
     parser.add_argument("--temp", type=float, default=1.0)  #
     parser.add_argument("--random_seed", type=int, default=0)  #
     parser.add_argument("--start_rev", action="store_true")
-    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--dir", type=str, default="")
+    parser.add_argument("--batch_size", type=int, default=1)
+
     args = parser.parse_args()
+    if args.dir == "fwd":
+        args.start_rev = False
+    elif args.dir == "rev":
+        args.start_rev = True
     generate(args)
 
 
