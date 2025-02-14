@@ -1,35 +1,25 @@
 import argparse
 import functools
-import json
 import os
-import random
-from typing import Optional, Sequence, Tuple
-
-from evodiff.utils import Tokenizer
-import numpy as np
-from sequence_models.utils import transformer_lr
+from typing import Sequence, Tuple
 import torch
 import torch.distributed as dist
-from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
 from torch.distributed.fsdp import (
     BackwardPrefetch,
     FullyShardedDataParallel as FSDP,
     MixedPrecision,
     ShardingStrategy,
 )
-import torch.distributed.checkpoint as dcp
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 import torch.nn as nn
-from torch.optim import Adam
-from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
 import wandb
 
 import pandas as pd
 from dayhoff.collators import MSAARCollator
-from dayhoff.constants import UL_ALPHABET_PLUS
 from dayhoff.datasets import UniRefDataset, OpenProteinDataset
-from dayhoff.model import ARDiffusionModel, _get_hf_model, OTHER_METRICS_KEY
+from dayhoff.model import OTHER_METRICS_KEY
+from dayhoff.utils import (load_msa_config_and_model, seed_everything, load_checkpoint, get_latest_dcp_checkpoint_path)
 
 
 
@@ -42,32 +32,6 @@ DEVICE = torch.device(f"cuda:{LOCAL_RANK}")
 
 def is_amlt() -> bool:
     return os.environ.get("AMLT_OUTPUT_DIR", None) is not None
-
-def load_config_and_model(config_fpath):
-    with open(config_fpath, "r") as f:
-        config = json.load(f)
-    tokenizer = Tokenizer(protein_alphabet=UL_ALPHABET_PLUS)
-    model_config = config["model_config"]
-    pretrained = model_config.pop("pretrained", False)
-    success = False
-    while not success:
-        try:
-            model = _get_hf_model(
-                "ai21labs/Jamba-v0.1",
-                tokenizer.pad_id,
-                pretrained=pretrained,
-                model_config=model_config,
-                trust_remote_code=True,
-            )
-            success = True
-        except FileNotFoundError:
-            pass
-    block = {type(layer) for layer in model.model.layers}
-    causal = True  # must be true for jamba
-    aux_loss_weight = config.get("aux_loss_weight", 0.0)
-    config["causal"] = causal  # save
-    model = ARDiffusionModel(model, aux_loss_weight=aux_loss_weight)
-    return config, tokenizer, model, block
 
 
 def get_val_dataloader(config, tokenizer, args):
@@ -115,13 +79,6 @@ def get_val_dataloader(config, tokenizer, args):
     return dl
 
 
-def seed_everything(seed: int) -> None:
-    random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-
 
 def step(
     model: nn.Module,
@@ -165,55 +122,6 @@ def epoch(
     return total_loss / total_tokens, total_accu / total_tokens
 
 
-def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Optional[str]:
-    ckpt_path = None
-    if last_step == -1:
-        for dir_name in os.listdir(ckpt_dir):
-            if "dcp_" in dir_name:
-                step = int(dir_name.split('dcp_')[-1])
-                if step > last_step:
-                    ckpt_path = os.path.join(ckpt_dir, dir_name)
-                    last_step = step
-    else:
-        ckpt_path = os.path.join(ckpt_dir, f'dcp_{last_step}')
-    return ckpt_path
-
-
-def load_checkpoint(model, optimizer, scheduler, ckpt_dir: str, last_step: int = -1) -> Tuple[int, int, int, int]:
-    ckpt_path = get_latest_dcp_checkpoint_path(ckpt_dir, last_step=last_step)
-    if ckpt_path:
-        print(f"Loading weights from {ckpt_path}...", flush=True)
-        fs_storage_reader = torch.distributed.checkpoint.FileSystemReader(ckpt_path)
-
-        model_state_dict, optimizer_state_dict = get_state_dict(model, optimizer)
-        state_dict = {
-            "model_state_dict": model_state_dict,
-            "optimizer_state_dict": optimizer_state_dict
-        }
-        dcp.load(
-            state_dict=state_dict,
-            storage_reader=fs_storage_reader,
-        )
-        # sets our state dicts on the model and optimizer, now that we've loaded
-        set_state_dict(
-            model,
-            optimizer,
-            model_state_dict=model_state_dict,
-            optim_state_dict=optimizer_state_dict
-        )
-        if os.path.exists(os.path.join(ckpt_path, 'scheduler.pt')):
-            sd = torch.load(os.path.join(ckpt_path, 'scheduler.pt'), map_location=torch.device("cpu"))
-        else:
-            sd = torch.load(os.path.join(ckpt_path, 'scheduler0.pt'), map_location=torch.device("cpu"))
-
-        scheduler.load_state_dict(sd["scheduler_state_dict"])
-
-        # sequences must optionally return 0 for backwards compatibility with old checkpoints
-        return sd["epoch"] + 1, sd["step"], sd["tokens"], sd.get("sequences", 0)
-    else:
-        return 0, 0, 0, 0
-
-
 def train(args: argparse.Namespace) -> None:
     print(f"Starting job on rank {RANK} with local rank {LOCAL_RANK} and world size {WORLD_SIZE}")
     seed_everything(0)
@@ -223,7 +131,7 @@ def train(args: argparse.Namespace) -> None:
     torch.cuda.set_device(LOCAL_RANK)
     if args.verbose:
         print("Initializing model...", RANK)
-    config, tokenizer, model, blk_types = load_config_and_model(args.out_fpath + 'config.json')
+    config, tokenizer, model, blk_types = load_msa_config_and_model(args.out_fpath + 'config.json')
     if RANK == 0:
         wandb.init(config=config, mode='online')
     if args.verbose:
@@ -268,11 +176,6 @@ def train(args: argparse.Namespace) -> None:
         mixed_precision=mixed_precision,
         backward_prefetch=bwd_prefetch,
     )
-    lr = config["lr"]
-    warmup_steps = max(config["warmup_steps"], 1)
-    optimizer = Adam(model.parameters(), lr=lr, weight_decay=config.get("weight_decay", 0.0))
-    lr_func = transformer_lr(warmup_steps)
-    scheduler = LambdaLR(optimizer, lr_func)
     results = pd.DataFrame(columns=['nsteps', 'ce_loss', 'accuracy'])
     if args.gigaref:
         out_fname = args.out_fpath + 'gigaref.csv'
@@ -307,7 +210,7 @@ def train(args: argparse.Namespace) -> None:
             accu = r['accuracy'].values[0]
         else:
             # load the state
-            _ = load_checkpoint(model, optimizer, scheduler, args.out_fpath, step)
+            _ = load_checkpoint(model, None, None, args.out_fpath, step, rank=RANK)
             dl_valid.sampler.set_epoch(0)
             model = model.eval()
             loss, accu = epoch(model, dl_valid)

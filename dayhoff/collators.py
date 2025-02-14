@@ -321,7 +321,8 @@ class MSAARCollator:
         pad_to_multiple_of: Optional[int] = None,
         flip_prob: int = 0.5,
         query_last_prob: int = 0.5,
-            trim_to: int = None
+            trim_to: int = None,
+            trim_to2: int = None
     ) -> None:
         self.tokenizer = tokenizer
         self.pad_to_mult = pad_to_multiple_of
@@ -341,6 +342,7 @@ class MSAARCollator:
         self.flip_prob = flip_prob
         self.query_last_prob = query_last_prob
         self.trim_to = trim_to
+        self.trim_to2 = trim_to2
 
     def __call__(self, batch_msa: "list") -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
@@ -425,6 +427,10 @@ class MSAARCollator:
             if ell > 512 * 64:
                 src = src[:, :512 * 64]
                 tgt = tgt[:, :512 * 64]
+        if self.trim_to2 is not None:
+            n, ell = src.shape
+            src = src[:, :self.trim_to2]
+            tgt = tgt[:, :self.trim_to2]
         return src, tgt
 
 
