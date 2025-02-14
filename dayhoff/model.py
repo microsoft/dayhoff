@@ -10,6 +10,7 @@ from transformers import AutoModelForCausalLM, AutoConfig, PreTrainedModel
 
 from dayhoff.constants import UL_ALPHABET_PLUS, TaskType
 from dayhoff.losses import OAMaskedCrossEntropyLoss
+from huggingface_hub import PyTorchModelHubMixin
 
 OTHER_METRICS_KEY = "other_metrics"
 
@@ -23,7 +24,7 @@ class LogitOnlyModelWrapper(nn.Module):
         return {"logits": self.module(*args, **kwargs)}
 
 
-class OrderAgnosticDiffusionModel(nn.Module):
+class OrderAgnosticDiffusionModel(nn.Module,PyTorchModelHubMixin):
     def __init__(
         self, module: nn.Module, padding_id: int, aux_loss_weight: float = 1.0
     ):
@@ -77,7 +78,7 @@ class OrderAgnosticDiffusionModel(nn.Module):
         return outputs
 
 
-class ARDiffusionModel(nn.Module):
+class ARDiffusionModel(nn.Module,PyTorchModelHubMixin):
     def __init__(self, module: nn.Module, aux_loss_weight: float = 1.0):
         super().__init__()
         self.module = module
@@ -128,7 +129,7 @@ class ARDiffusionModel(nn.Module):
         return output
 
 
-class MSAModelWithMetrics(nn.Module):
+class MSAModelWithMetrics(nn.Module,PyTorchModelHubMixin):
     """
     wrapper for running models
 

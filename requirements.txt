@@ -1,8 +1,14 @@
 biopython~=1.83
 torch-geometric~=2.5.2
 torch-scatter~=2.1.2
-transformers~=4.40.2
+transformers~=4.42.4
+datasets~=3.2.0 #for HF datasets
+evodiff~=1.1.0
 wandb~=0.16.6
+python-dotenv~=1.0.1 # to load env variables
+torch~=2.5.1 #TODO: verify with team
+causal-conv1d>=1.2.0 #For jamba/mamba
+mamba-ssm~=2.2.4 #For jamba/mamba
 
 biotite~=0.40.0
 blosum~=2.0.3

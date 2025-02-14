@@ -1,18 +1,8 @@
 import argparse
-import datetime
-import json
 import os
-import random
-from typing import Optional, Tuple
 from tqdm import tqdm
-import re
-
-
-import numpy as np
 from transformers import SuppressTokensLogitsProcessor
-
 import torch
-
 from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
 from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
 from dayhoff.utils import (load_msa_config_and_model,
@@ -20,9 +10,15 @@ from dayhoff.utils import (load_msa_config_and_model,
 
 
 # default to a single-GPU setup if not present
+if "RANK" not in os.environ and "WORLD_SIZE" not in os.environ:
+    os.environ["RANK"] = "0"
+    os.environ["WORLD_SIZE"] = "1"
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "8889"
+
 RANK = int(os.environ["RANK"])
-#LOCAL_RANK = int(os.environ["LOCAL_RANK"])
 WORLD_SIZE = int(os.environ["WORLD_SIZE"])
+
 DEVICE = torch.device(f"cuda:{RANK}")
 print("device", DEVICE)
 
@@ -39,7 +35,7 @@ def generate(args: argparse.Namespace) -> None:
         print("Done initializing model.", RANK)
 
     # Load model and optimizer onto CPU
-    initial_epoch, total_steps, total_tokens, total_seqs, _ = load_checkpoint(
+    _, total_steps, _, _, _ = load_checkpoint(
         model, None, None, args.in_fpath, args.checkpoint_step, rank=RANK
     )
     # Move only model to GPU
@@ -114,6 +110,7 @@ def generate(args: argparse.Namespace) -> None:
     #         pass
     unwritten_generations = []
     unwritten_ns = []
+    #
     for s in tqdm(range(args.n_generations // args.batch_size)):
         generated = model.module.generate(start, do_sample=True, logits_processor=[sup],
                                                  temperature=args.temp, num_beams=1, max_new_tokens=max_len,
@@ -127,7 +124,8 @@ def generate(args: argparse.Namespace) -> None:
                     unt = unt[::-1]
                 unwritten_generations.append(unt)
                 unwritten_ns.append(n_gen)
-                if len(unwritten_generations) == 100:
+                # save every 100 generations or last in case n_generations is less than 100 or not a multiple of 100
+                if len(unwritten_generations) == 100 or s == args.n_generations // args.batch_size - 1: 
                     with open(os.path.join(out_dir, 'rank%d_seed%d.fasta' % (RANK, args.random_seed)), "a") as f:
                         for uwg, nwn in zip(unwritten_generations, unwritten_ns):
                             f.write(">%d_%d_%d\n" % (RANK, nwn, args.random_seed))
