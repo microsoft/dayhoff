@@ -51,6 +51,7 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE)  -> None:
                 sample = torch.zeros((1, scaffold_length)) + tokenizer.mask_id
                 print(spec)
                 for sp in spec:
+                    print(sp)
                     if isinstance(sp, str):
                         motifs.append(spec)
                         motif_length += len(sp)

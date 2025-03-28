@@ -152,7 +152,6 @@ def main():
     parser.add_argument("--test-cases", type=str, default='MotifBench/test_cases.csv')
     parser.add_argument("--output", type=str, default='motifbench_scaffolds')
     parser.add_argument("--motifbench-path", type=str, default='MotifBench/')
-    parser.add_argument("--rfdiffusion", action="store_true")
     args = parser.parse_args()
 
     output_fasta_path = os.path.join(args.output + 'fasta/')
