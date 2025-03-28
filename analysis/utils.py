@@ -1,6 +1,8 @@
 from Bio.PDB import PDBParser
 import numpy as np
 import os
+import pandas as pd
+import subprocess
 
 def get_all_paths(pdb_path, mpnn_path):
     all_files = []
@@ -62,16 +64,33 @@ def results_to_pandas(all_files, all_mpnn_files, name=""):
     
     fold_dict = {
             "full_path": fold_full_path,
-            f"{name}_plddt": plddts,
+            f"{name}plddt": plddts,
             "file": fold_files,
     }
     
     mpnn_dict = {
-            f"{name}_perplexity": perps,
+            f"{name}perplexity": perps,
             "file": mpnn_files,
     }
     
     fold_df = pd.DataFrame(fold_dict)
     mpnn_df = pd.DataFrame(mpnn_dict)
-    mpnn_df
-    return fold_df, mpnn_df
+    merged_df = pd.merge(fold_df, mpnn_df, on='file', how='inner') # merge on file name 
+
+    return fold_df, mpnn_df, merged_df
+
+def run_tmscore(pdb_1, pdb_2, path_to_TMalign: str = "/home/salamdari/Desktop/dayhoff/TMalign"):
+     # Run TMalign to find structural alignment
+    result = subprocess.run(
+        [path_to_TMalign, pdb_1, pdb_2], 
+        capture_output=True, 
+        text=True
+    )
+
+    # Parse TM-score from output
+    lines = result.stdout.splitlines()
+    for line in lines:
+        if "TM-score=" in line:
+            tm_score = float(line.split()[1])
+    
+    return tm_score
