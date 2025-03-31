@@ -1,0 +1,10 @@
+# Ignore all files and folders
+/*
+
+# But do not ignore the src folder and its contents, the config folder, and main.py
+!/src/
+!/dayhoff/
+!.env
+!*.py
+!*.md
+!*.yaml

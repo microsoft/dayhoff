@@ -1,0 +1,80 @@
+# For field details: https://amulet-docs.azurewebsites.net/config_file.html
+
+## WARNING: MUST BE USING VM_MOUNT PROJECT WITH CONTAINER = MOUNT ##
+description: Upload HF datasets to huggingface hub
+
+target:
+  service: sing
+  name: msrresrchvc #msrresrchvc #msrresrchlab
+  workspace_name: bio0-ext
+
+environment:
+  image: base/job/pytorch/acpt-torch2.5.0-py3.10-cuda12.4-ubuntu22.04:20241022T103546977 #acpt-2.4.0-py3.10-cuda12.4:20240731T103952913
+  registry: singularitybase.azurecr.io
+  setup:
+  - pip install -e ./ --user
+  - pip install pyfastx==2.2.0 datasets==3.2.0 huggingface-hub==0.27.1 python-dotenv==1.0.1 ijson==3.3.0
+
+# storage:
+#     output:
+#         storage_account_name: biomlcollab2
+#         container_name: dayhoffdata
+#         mount_dir: /mnt/my_outputs
+
+code:
+  local_dir: $CONFIG_DIR/ 
+
+data: 
+  #Location of the data relative to the container
+  remote_dir: "dayhoff" 
+
+# SKU usage: G1 (single GPU), G4 (quad GPU), G4-V100 (1 machine, 4 V100 gpus), etc...
+jobs:
+# - name: 'uniref datasets to hf hub' 
+#   sku: 8C15 # 1 GPU Job  8C15, 8C7, 8C30, 8C60
+#   priority: high
+#   identity: managed
+#   preemptible: False
+#   command:
+#   - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id samirchar/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref*" --repo-create-mode append
+#   submit_args:
+#     env:
+#       _AZUREML_SINGULARITY_JOB_UAI:  /subscriptions/7be94754-107d-43b8-b840-202dff0e7cae/resourceGroups/bio0-ext/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bio0-ext-uai
+# - name: 'uniref datasets to hf hub' 
+#   sku: 8C7 # 1 GPU Job  8C15, 8C7, 8C30, 8C60
+#   priority: high
+#   identity: managed
+#   preemptible: False
+#   command:
+#   # - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref90*/jsonl*" --repo-create-mode append
+#   - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref90*/*.json" --repo-create-mode append
+#   # - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref90*/*.fasta" --repo-create-mode append
+#   - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref90*/*.npz" --repo-create-mode append
+#   - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref90*/arrow/train*" --repo-create-mode append
+#   - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref90*/arrow/test*" --repo-create-mode append
+#   - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref90*/arrow/rtest*" --repo-create-mode append
+#   - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*uniref90*/arrow/valid*" --repo-create-mode append
+  
+#   submit_args:
+#     env:
+#       _AZUREML_SINGULARITY_JOB_UAI:  /subscriptions/7be94754-107d-43b8-b840-202dff0e7cae/resourceGroups/bio0-ext/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bio0-ext-uai
+
+- name: 'gigaref only singletons datasets to hf hub' 
+  sku: 8C7 # 1 GPU Job  8C15, 8C7, 8C30, 8C60
+  priority: high
+  identity: managed
+  preemptible: False
+  command:
+  - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*gigaref_full/with_singletons/arrow/*" --repo-create-mode append
+  - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*gigaref_full/arrow/with_singletons/*.json" --repo-create-mode append
+  - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*gigaref_full/*.json" --repo-create-mode append
+  - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*gigaref_full/*.dat" --repo-create-mode append
+  - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*gigaref_full/*.npz" --repo-create-mode append
+  # - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-type dataset --private --allow-patterns "*gigaref_full/with_singletons/jsonl/*" --repo-create-mode append
+  # - python src/upload-folder-to-hf-hub.py --folder-path data --repo-id microsoft/DayhoffDataset --repo-typ*e dataset --private --allow-patterns "*gigaref_full/*.fasta" --repo-create-mode append
+  
+  
+  submit_args:
+    env:
+      _AZUREML_SINGULARITY_JOB_UAI:  /subscriptions/7be94754-107d-43b8-b840-202dff0e7cae/resourceGroups/bio0-ext/providers/Microsoft.ManagedIdentity/userAssignedIdentities/bio0-ext-uai
+

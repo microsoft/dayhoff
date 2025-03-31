@@ -1,0 +1,68 @@
+Collecting mamba-ssm
+  Using cached mamba_ssm-2.2.4.tar.gz (91 kB)
+  Installing build dependencies: started
+  Installing build dependencies: still running...
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting causal-conv1d
+  Downloading causal_conv1d-1.5.0.post8.tar.gz (9.4 kB)
+  Preparing metadata (setup.py): started
+  Preparing metadata (setup.py): finished with status 'done'
+Requirement already satisfied: torch in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from mamba-ssm) (2.5.1)
+Collecting ninja (from mamba-ssm)
+  Using cached ninja-1.11.1.3-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl.metadata (5.3 kB)
+Collecting einops (from mamba-ssm)
+  Downloading einops-0.8.0-py3-none-any.whl.metadata (12 kB)
+Requirement already satisfied: transformers in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from mamba-ssm) (4.40.2)
+Requirement already satisfied: packaging in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from mamba-ssm) (24.2)
+Requirement already satisfied: setuptools>=61.0.0 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from mamba-ssm) (75.1.0)
+Requirement already satisfied: filelock in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (3.16.1)
+Requirement already satisfied: typing-extensions>=4.8.0 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (4.12.2)
+Requirement already satisfied: networkx in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (3.4.2)
+Requirement already satisfied: jinja2 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (3.1.5)
+Requirement already satisfied: fsspec in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (2024.9.0)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.4.127 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (12.4.127)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.4.127 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (12.4.127)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.4.127 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (12.4.127)
+Requirement already satisfied: nvidia-cudnn-cu12==9.1.0.70 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (9.1.0.70)
+Requirement already satisfied: nvidia-cublas-cu12==12.4.5.8 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (12.4.5.8)
+Requirement already satisfied: nvidia-cufft-cu12==11.2.1.3 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (11.2.1.3)
+Requirement already satisfied: nvidia-curand-cu12==10.3.5.147 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (10.3.5.147)
+Requirement already satisfied: nvidia-cusolver-cu12==11.6.1.9 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (11.6.1.9)
+Requirement already satisfied: nvidia-cusparse-cu12==12.3.1.170 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (12.3.1.170)
+Requirement already satisfied: nvidia-nccl-cu12==2.21.5 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (2.21.5)
+Requirement already satisfied: nvidia-nvtx-cu12==12.4.127 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (12.4.127)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.4.127 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (12.4.127)
+Requirement already satisfied: triton==3.1.0 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (3.1.0)
+Requirement already satisfied: sympy==1.13.1 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from torch->mamba-ssm) (1.13.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from sympy==1.13.1->torch->mamba-ssm) (1.3.0)
+Requirement already satisfied: huggingface-hub<1.0,>=0.19.3 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from transformers->mamba-ssm) (0.27.1)
+Requirement already satisfied: numpy>=1.17 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from transformers->mamba-ssm) (1.26.4)
+Requirement already satisfied: pyyaml>=5.1 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from transformers->mamba-ssm) (6.0.2)
+Requirement already satisfied: regex!=2019.12.17 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from transformers->mamba-ssm) (2024.11.6)
+Requirement already satisfied: requests in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from transformers->mamba-ssm) (2.32.3)
+Requirement already satisfied: tokenizers<0.20,>=0.19 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from transformers->mamba-ssm) (0.19.1)
+Requirement already satisfied: safetensors>=0.4.1 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from transformers->mamba-ssm) (0.5.2)
+Requirement already satisfied: tqdm>=4.27 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from transformers->mamba-ssm) (4.67.1)
+Requirement already satisfied: MarkupSafe>=2.0 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from jinja2->torch->mamba-ssm) (3.0.2)
+Requirement already satisfied: charset-normalizer<4,>=2 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from requests->transformers->mamba-ssm) (3.4.1)
+Requirement already satisfied: idna<4,>=2.5 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from requests->transformers->mamba-ssm) (3.10)
+Requirement already satisfied: urllib3<3,>=1.21.1 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from requests->transformers->mamba-ssm) (2.3.0)
+Requirement already satisfied: certifi>=2017.4.17 in /home/samirchar/miniconda3/envs/dayhoff/lib/python3.10/site-packages (from requests->transformers->mamba-ssm) (2024.12.14)
+Downloading einops-0.8.0-py3-none-any.whl (43 kB)
+Using cached ninja-1.11.1.3-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.whl (422 kB)
+Building wheels for collected packages: mamba-ssm, causal-conv1d
+  Building wheel for mamba-ssm (pyproject.toml): started
+  Building wheel for mamba-ssm (pyproject.toml): finished with status 'done'
+  Created wheel for mamba-ssm: filename=mamba_ssm-2.2.4-cp310-cp310-linux_x86_64.whl size=323653202 sha256=c6edff068928b4ceacc6e820a163908c02294fe01dbcc05e95ed4530a5f81e77
+  Stored in directory: /home/samirchar/.cache/pip/wheels/aa/af/c7/fb77bfcd94bd3e052545033449d8c47dc97222d79c39c5bc67
+  Building wheel for causal-conv1d (setup.py): started
+  Building wheel for causal-conv1d (setup.py): finished with status 'done'
+  Created wheel for causal-conv1d: filename=causal_conv1d-1.5.0.post8-cp310-cp310-linux_x86_64.whl size=103960374 sha256=ec956a2d0fa48bd16a8dd5be9ad1c03db88565ea6ee2679e362940fef659284b
+  Stored in directory: /home/samirchar/.cache/pip/wheels/75/ef/0a/d9abf869acdd5fc07f403f4d8dd9db650cd66e81528a907941
+Successfully built mamba-ssm causal-conv1d
+Installing collected packages: ninja, einops, causal-conv1d, mamba-ssm
+Successfully installed causal-conv1d-1.5.0.post8 einops-0.8.0 mamba-ssm-2.2.4 ninja-1.11.1.3
