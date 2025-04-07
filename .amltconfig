@@ -1,1 +1,0 @@
-{"project_name": "dayhoff", "storage_account_name": "biomlcollab2", "container_name": "dayhoffdata", "blob_storage_account_name": "biomlcollab2", "registry_name": "projects", "local_path": "/mnt/blob/dayhoff", "default_output_dir": "/mnt/blob/dayhoff/amlt", "project_uuid": "7257696656.20654-e7d5cd8e-eb50-40df-9739-042a05a68613", "version": "10.10.2"}

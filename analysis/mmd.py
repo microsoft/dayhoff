@@ -344,6 +344,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='MMD Analysis')
     parser.add_argument('--input-dir', type=str, help='Input directory where all datasets are located (e.g. /data/generation_annotations)')
+    parser.add_argument('--real-datasets', type=str, nargs='+', help='List of real datasets to use',default=['uniref50','gigaref_clustered'])
     parser.add_argument('--output-dir', type=str, help='Output directory for results')
     parser.add_argument('--subbatch-size', type=int, default=1000, help='Subbatch size for MMD computation')
     parser.add_argument('--num-iterations', type=int, default=10_000, help='Number of iterations for MMD computation')
@@ -356,7 +357,7 @@ if __name__ == "__main__":
     is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
 
     if is_amlt:
-        args.output_dir = osp.join(os.environ["AMLT_OUTPUT_DIR"], args.output_dir)
+        args.output_dir = os.path.join(os.environ["AMLT_OUTPUT_DIR"], args.output_dir)
 
     # create output directory if it doesn't exist
     os.makedirs(args.output_dir, exist_ok=True)
@@ -381,9 +382,13 @@ if __name__ == "__main__":
         
     ]
 
+    real_ds_name_to_pattern = {
+        'uniref50': os.path.join(args.input_dir,'UNIREF50_10M/test_1_logits*'),
+        'gigaref_clustered': os.path.join(args.input_dir,'GIGAREF_CLUSTERED_10M/test_1_logits*')
+    }
+
     real_datasets_patterns = [
-        os.path.join(args.input_dir,'UNIREF50_10M/test_1_logits*'),
-        # 'GIGAREF_10M/test_1_logits*'
+        real_ds_name_to_pattern[ds] for ds in args.real_datasets
     ]
     
     # Verify fake dataset patters and real dataset patterns exist
