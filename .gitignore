@@ -2,6 +2,12 @@ data/
 outputs/
 hf_repo/
 
+#AMLT
+.amlt*
+amlt*.yaml
+
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
