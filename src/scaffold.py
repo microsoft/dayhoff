@@ -1,16 +1,12 @@
 import argparse
-import datetime
 import json
 import os
-import random
-from typing import Optional, Tuple
 from tqdm import tqdm
-import re
+import string
 
 
 import numpy as np
 from transformers import SuppressTokensLogitsProcessor
-import torch.nn.functional as F
 import torch
 
 from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
@@ -23,7 +19,7 @@ from dayhoff.utils import (load_msa_config_and_model,
 RANK = int(os.environ["RANK"])
 #LOCAL_RANK = int(os.environ["LOCAL_RANK"])
 WORLD_SIZE = int(os.environ["WORLD_SIZE"])
-DEVICE = torch.device(f"cuda:{RANK + 1}")
+DEVICE = torch.device(f"cuda:{RANK + 3}")
 print("device", DEVICE)
 
 
@@ -67,13 +63,12 @@ def generate(args: argparse.Namespace) -> None:
             continue
         with open(os.path.join(args.motif_dir, motif_file), "r") as f:
             motif = json.load(f)
-        if "A" in motif:
-            spec = motif["A"]
-        elif "F" in motif:
-            spec = motif["F"]
-        else:
-            spec = motif["E"]
+        for letter in string.ascii_uppercase:
+            if letter in motif:
+                spec = motif[letter]
+                break
         scaffold_length = motif["scaffold_length"]
+
         motif_length = 0
         motif_toks = []
         between_segment_lengths = []
@@ -86,7 +81,15 @@ def generate(args: argparse.Namespace) -> None:
                 motif_length += sp
 
         for s in tqdm(range(args.n_generations)):
-            remaining_length = scaffold_length - motif_length
+            if isinstance(scaffold_length, str):
+                if "-" in scaffold_length:
+                    sl_min, sl_max = scaffold_length.split('-')
+                    sl = np.random.randint(int(sl_min), int(sl_max) + 1)
+                else:
+                    sl = int(scaffold_length)
+            else:
+                sl = scaffold_length
+            remaining_length = sl - motif_length
             if remaining_length < 0:
                 remove_number = -remaining_length
                 before_length = 0
@@ -124,13 +127,14 @@ def generate(args: argparse.Namespace) -> None:
                     start = torch.cat([generated, motif_toks[i]], dim=1)
                 else:
                     generated = torch.cat([generated, eos_seq], dim=1)
-            untokenized = [tokenizer.untokenize(g) for g in generated]
             # print(untokenized)
             if segment_lengths[0] > 0:
-                rev_generated = generated[:, 1:].flip(dims=(1,)) # take out the {
+                rev_generated = generated[:, 1:].flip(dims=(1,)) # take out the @
                 rev_generated = model.module.generate(rev_generated, do_sample=True, temperature=args.temp, logits_processor=[sup],
                                                       num_beams=1, max_new_tokens=segment_lengths[0])
                 generated = rev_generated[:, 1:].flip(dims=(1,))
+            else:
+                generated = generated[:, 1:-1] # cut out start and stop
             untokenized = [tokenizer.untokenize(g) for g in generated]
             # print(untokenized)
 
