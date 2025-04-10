@@ -344,7 +344,7 @@ class MSAARCollator:
         self.trim_to = trim_to
         self.trim_to2 = trim_to2
 
-    def __call__(self, batch_msa: "list") -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def __call__(self, batch_msa: "list") -> Tuple[torch.Tensor, torch.Tensor]:
 
 
         # Determine if sequence only
@@ -428,7 +428,6 @@ class MSAARCollator:
                 src = src[:, :512 * 64]
                 tgt = tgt[:, :512 * 64]
         if self.trim_to2 is not None:
-            n, ell = src.shape
             src = src[:, :self.trim_to2]
             tgt = tgt[:, :self.trim_to2]
         return src, tgt
