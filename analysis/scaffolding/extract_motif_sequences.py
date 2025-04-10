@@ -31,7 +31,6 @@ def download_pdb(PDB_ID, outfile, motif_bench_location: str = "MotifBench/"):
 
 def load_structure(fpath, chain=None):
     """
-    Copied directly from facebookresearch/esm on 8/9, removing archived esm dependencies
     Args:
         fpath: filepath to either pdb or cif file
         chain: the chain id or list of chain ids to load
@@ -103,7 +102,6 @@ def extract_coords_from_structure(structure: biotite.structure.AtomArray):
 
 def extract_coords_from_complex(structure):
     """
-    Adapted from facebookresearch/esm on 8/9, removing archived esm dependencies
     Args:
         structure: biotite AtomArray
     Returns:
@@ -151,7 +149,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test-cases", type=str, default='MotifBench/test_cases.csv')
     parser.add_argument("--output", type=str, default='motifbench_scaffolds')
-    parser.add_argument("--motifbench-path", type=str, default='MotifBench/')
+    parser.add_argument("--motifbench-path", type=str, default='MotifBench/') # Needed for local PDB download for a specific case 
+    parser.add_argument("--verbose", action="store_true") # Good for sanity checking 
     args = parser.parse_args()
 
     output_fasta_path = os.path.join(args.output + 'fasta/')
@@ -165,22 +164,26 @@ def main():
         os.makedirs(output_pdb_path, exist_ok=True)
 
     test_cases = pd.read_csv(args.test_cases)
-    #for pdb in test_cases['pdb_id'].tolist():
 
     for i, row in test_cases.iterrows():
         pdb = row['pdb_id']
-        print(pdb)
+        print(f"processing {pdb}")
         pdb_file = os.path.join(output_pdb_path, "{:02}_{}.pdb".format(i, pdb))
         save_full_file = os.path.join(output_fasta_path, "{:02}_{}.json".format(i, pdb))
         save_motif_file = os.path.join(output_motif_fasta_path, "{:02}_{}.json".format(i, pdb))
 
         download_pdb(pdb, pdb_file, motif_bench_location=args.motifbench_path)
         sequence = get_sequence(pdb_file)
-        print(sequence)
 
         motif_segements = parse_contig_string(row['motif_residues'])
-        redesign_segments = parse_contig_string(row['redesign_idcs']) if not pd.isnull(row['redesign_idcs']) else None
-        scaffold_length = row['length']
+        redesign_segments = parse_contig_string(row['redesign_idcs']) if not pd.isnull(row['redesign_idcs']) else None # TODO not using this right now
+        if 'length' in row:
+            total_len = False
+            scaffold_length = row['length']
+        elif 'total_length' in row:
+            total_len = True
+            scaffold_length = row['total_length']
+        print(f"total_len {total_len} scaffold length {scaffold_length}")
         num_group = row['group']
 
         scaffolding_motif = []
@@ -193,36 +196,32 @@ def main():
             scaffolding_motif.append((segment['chain'], sequence[segment['chain']][segment['start'] : segment['end']]))
             current_chain = segment['chain']
             prev_end = segment['end']
-
+        if args.verbose:
+            print(f"scaffolding motif {scaffolding_motif}")
         merge_chains = {}
         merged_seqs = []
+        motif_lens = 0
         for i, motif in enumerate(scaffolding_motif):
-            print(i, motif)
-            if motif[0] == 'sample':
-                merged_seqs.append((motif[1], motif[2]))
-                #if i == 0:
-                if i < len(scaffolding_motif) - 1:
-                    chain = scaffolding_motif[i+1][0]
-                    current_chain = chain
-                #else:
-                #    chain = current_chain
-            else:
-                #import pdb; pdb.set_trace()
-                chain, seq = motif
-                # print("chain", chain ,current_chain)
-                if i == 0:
-                    current_chain = chain
-                if chain == current_chain:
-                    merged_seqs.append(seq)
-                else:
-                    merged_seqs = []
+            if args.verbose:
+                print(i, motif)
+            chain, seq = motif
+            if not str(seq).isdigit():
+                motif_lens += len(seq)
+            if i == 0:
                 current_chain = chain
+            if chain == current_chain:
+                merged_seqs.append(seq)
+            else:
+                merged_seqs = []
+            current_chain = chain
             merge_chains[chain] = merged_seqs
-            #print("merged", merged_seqs)
 
-
-        print(merge_chains)
-        merge_chains['scaffold_length'] = scaffold_length
+        if args.verbose:
+            print(merge_chains)
+        if total_len:
+            merge_chains['scaffold_length'] = scaffold_length
+        else:
+            merge_chains['scaffold_length'] = int(scaffold_length) + motif_lens
         merge_chains['group'] = num_group
         merge_chains['original_sequence'] = sequence
         merge_chains['pdb_id'] = pdb
