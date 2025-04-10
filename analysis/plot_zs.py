@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import torch
 import numpy as np
@@ -11,7 +12,7 @@ _ = sns.set_style('white')
 world_size = 8
 model_names = [
     # 'dayhoff-3b-msa-gigaref',
-    'dayhoff-3b-msa-uniref90-cooldown',
+    # 'dayhoff-3b-msa-uniref90-cooldown',
     'dayhoff-170m-1novelty',
     'dayhoff-170m-uniref50',
     'dayhoff-170m-rmsd',
@@ -23,7 +24,64 @@ model_names = [
 ]
 dmss = ['indels', 'substitutions']
 
-out_fpath = '/home/kevyan/generations/proteingym/'
+# Get all the predictions into one csv
+assays = {}
+data_fpath = '/home/kevyan/generations/proteingym/'
+for model_name in model_names:
+    out_dir = os.path.join(data_fpath, 'reformatted', model_name)
+    os.makedirs(out_dir, exist_ok=True)
+    for dms in dmss:
+        prediction_files = os.listdir(os.path.join(data_fpath, 'proteingym', dms))
+        for prediction_file in prediction_files:
+            if model_name not in prediction_file:
+                continue
+            _ = shutil.copyfile(os.path.join(data_fpath, 'proteingym', dms, prediction_file), os.path.join(out_dir, prediction_file.replace(model_name, '')[1:]))
+
+
+model_name = 'dayhoff-3b-msa-uniref90-cooldown_no_seq'
+data_fpath = '/home/kevyan/generations/proteingym/'
+out_dir = os.path.join(data_fpath, 'reformatted', model_name)
+os.makedirs(out_dir, exist_ok=True)
+for dms in dmss:
+    prediction_files = os.listdir(os.path.join(data_fpath, 'proteingym_repeats', dms))
+    for prediction_file in prediction_files:
+        if model_name not in prediction_file:
+            continue
+        _ = shutil.copyfile(os.path.join(data_fpath, 'proteingym_repeats', dms, prediction_file), os.path.join(out_dir, prediction_file.replace(model_name, '')[1:]))
+
+model_name = 'dayhoff-3b-msa-uniref90-cooldown_indel4'
+data_fpath = '/home/kevyan/generations/proteingym/'
+out_dir = os.path.join(data_fpath, 'reformatted', model_name)
+os.makedirs(out_dir, exist_ok=True)
+for dms in dmss:
+    prediction_files = os.listdir(os.path.join(data_fpath, 'proteingym_repeats_indel', dms))
+    for prediction_file in prediction_files:
+        if model_name not in prediction_file:
+            continue
+        df = pd.read_csv(os.path.join(data_fpath, 'proteingym_repeats_indel', dms, prediction_file))
+        df['score'] = 0
+        for i in range(4):
+            scores = df['dayhoff-3b-msa-uniref90-cooldown_indel_score%d' %i].values
+            df['score'] += (scores - scores.mean()) / scores.std()
+        df.to_csv(os.path.join(out_dir, prediction_file.replace(model_name, '')[1:]))
+        # _ = shutil.copyfile(os.path.join(data_fpath, 'proteingym_repeats_indel', dms, prediction_file), os.path.join(out_dir, prediction_file.replace(model_name, '')[1:]))
+
+model_name = 'dayhoff-3b-msa-uniref90-cooldown_gap4'
+data_fpath = '/home/kevyan/generations/proteingym/'
+out_dir = os.path.join(data_fpath, 'reformatted', model_name)
+os.makedirs(out_dir, exist_ok=True)
+for dms in ['substitutions']:
+    prediction_files = os.listdir(os.path.join(data_fpath, 'proteingym_repeats_gap3', dms))
+    for prediction_file in prediction_files:
+        if model_name not in prediction_file:
+            continue
+        _ = shutil.copyfile(os.path.join(data_fpath, 'proteingym_repeats_gap3', dms, prediction_file), os.path.join(out_dir, prediction_file.replace(model_name, '')[1:]))
+
+
+
+
+# Write the outputs that proteingym needs to collate results
+
 pal = sns.color_palette()
 fig, ax = plt.subplots()
 dfs = []

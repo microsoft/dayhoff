@@ -1,5 +1,6 @@
 import argparse
 import functools
+import string
 import os
 from typing import Sequence, Tuple
 from tqdm import tqdm
@@ -64,7 +65,10 @@ def zero_shot(
             continue
         assay_name = file.split('.csv')[0]
         if args.no_seq:
-            df_out_file = os.path.join(out_dir, args.model_name + '_no_seq_' + assay_name + '.csv')
+            if args.gap:
+                df_out_file = os.path.join(out_dir, args.model_name + '_gap4_' + assay_name + '.csv')
+            else:
+                df_out_file = os.path.join(out_dir, args.model_name + '_indel4_' + assay_name + '.csv')
         else:
             df_out_file = os.path.join(out_dir, args.model_name + '_' + assay_name + '.csv')
         if os.path.exists(df_out_file):
@@ -123,14 +127,17 @@ def zero_shot(
                 print(protein_name)
             seqs = parse_fasta(os.path.join(msa_dir, msa_file))
             collator = MSAARCollator(tokenizer, flip_prob=0.0)
-            if not args.no_seq:
+            if args.no_seq:
                 replicates = 4
             else:
                 replicates = 1
             msas = []
             for rep in range(replicates):
                 msa_idx = np.random.choice(len(seqs) - 1, size=63) + 1
-                msa = [seqs[i].replace('-', '').replace('.', '').upper() for i in msa_idx]
+                if args.gap:
+                    msa = [seqs[i].replace('.', '-').upper() for i in msa_idx]
+                else:
+                    msa = [seqs[i].replace('-', '').replace('.', '').upper() for i in msa_idx]
                 msa_src, msa_tgt = collator([[None, msa]])
                 msa_src = msa_src.to(DEVICE)
                 msas.append(msa_src)
@@ -139,17 +146,18 @@ def zero_shot(
                 src, tgt = batch
                 src = src.to(DEVICE)
                 tgt = tgt.to(DEVICE)
+                tgt = tgt[0, 1:]
                 n, ell = src.shape
+                df_out.loc[i, args.model_name + '_indel_score'] = 0  # have to create it first
                 for rep, msa_src in enumerate(msas):
                     combined_src = torch.cat([msa_src, src], dim=1)
                     with torch.no_grad():
                         outputs = model.module(combined_src)['logits'][0, -ell:-1]
-                        tgt = tgt[0, 1:]
                         ce = torch.nn.functional.cross_entropy(outputs, tgt).item()
                     if replicates > 1:
                         df_out.loc[i, args.model_name + '_indel_score%d' %rep] = -ce
-                    df_out.loc[i, args.model_name + '_indel_score' ] = 0 # have to create it first
                     df_out.loc[i, args.model_name + '_indel_score' ] += -ce / len(msas)
+                    # print(i, rep, df_out.loc[i, args.model_name + '_indel_score' ], flush=True)
             indel_spearman = spearmanr(df_out[args.model_name + '_indel_score'], df_out['DMS_score']).statistic
             if not args.no_seq:
                 df_out[args.model_name + '_score'] = (df_out[args.model_name + '_seq_score'] + df_out[
@@ -200,7 +208,8 @@ def train(args: argparse.Namespace) -> None:
     subst_dir = os.path.join(args.data_root, "DMS_ProteinGym_substitutions")
     indel_dir = os.path.join(args.data_root, "DMS_ProteinGym_indels")
     msa_dir = os.path.join(args.data_root, "DMS_msa_files")
-    zero_shot(indel_dir, os.path.join(args.out_fpath, 'indels'), msa_dir, model, tokenizer, args)
+    if not args.gap:
+        zero_shot(indel_dir, os.path.join(args.out_fpath, 'indels'), msa_dir, model, tokenizer, args)
     zero_shot(subst_dir, os.path.join(args.out_fpath, 'substitutions'), msa_dir, model, tokenizer, args)
 
 
@@ -214,6 +223,8 @@ def main():
     parser.add_argument("checkpoint_step", type=int)
     parser.add_argument("--no_fa2", action="store_true")
     parser.add_argument("--msa", action="store_true")
+    parser.add_argument("--gap", action="store_true")
+
     parser.add_argument("--no_seq", action="store_true")
 
 
