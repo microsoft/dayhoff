@@ -134,7 +134,8 @@ def validate(args: argparse.Namespace) -> None:
         print(7, flush=True)
         for s in src:
             seq = tokenizer.untokenize(s)
-            seq = "".join([i for i in seq if i.isalpha()])
+            if args.task not in ["gap", "indel"]:
+                seq = "".join([i for i in seq if i.isalpha()])
             seqs.append(seq)
         if args.train and len(seqs) > 1024000:
             out_file = os.path.join(args.out_fpath, "train_" + args.model_name + '_' + str(
