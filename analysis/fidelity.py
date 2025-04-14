@@ -15,7 +15,6 @@ from transformers import AutoTokenizer, EsmForProteinFolding
 
 PATH_TO_PROTEINMPNN = "ProteinMPNN/"
 CWD = os.getcwd()
-import subprocess
 
 def get_bfactor(filename, chain="A"):
     parser = PDBParser(PERMISSIVE=1)
@@ -92,6 +91,60 @@ def parse_fasta_bad_kevin(fasta_fpath, return_names=False):
         return seqs, names
     else:
         return seqs
+
+def get_all_paths(pdb_path, mpnn_path):
+        all_files = []
+        all_mpnn_files = []
+        for i in os.listdir(pdb_path):
+            if '.pdb' in i:
+                all_files.append((os.path.join(pdb_path, i), i))
+        for j in os.listdir(mpnn_path):
+            all_mpnn_files.append((j, os.path.join(mpnn_path)))
+                
+        print(f"PDB Files: {len(all_files)}, MPNN Files: {len(all_mpnn_files)}")
+        return all_files, all_mpnn_files
+
+
+def results_to_pandas(all_files, all_mpnn_files, fold_method="omegafold", if_method="mpnn"):
+
+    plddts = []
+    perps = []
+    fold_full_path = []
+    fold_files = []
+    mpnn_files = []
+
+    for i, f in all_files: 
+        if os.path.exists(i):
+            plddts.append(get_bfactor(i))
+            fold_files.append(f.split('.pdb')[0])
+            fold_full_path.append(i)
+    
+    for f, mpnn_output_paths in all_mpnn_files: 
+        subdir_files = os.listdir(os.path.join(mpnn_output_paths, f, 'scores/'))
+        for mfile in subdir_files:
+            file = os.path.join(mpnn_output_paths, f, 'scores/', mfile)
+            if file.split('/')[-1] != '.ipynb_checkpoints':
+                perp = get_mpnn_perp(file)
+                mpnn_files.append(mfile.split('/')[-1].split('.npz')[0])
+                perps.append(perp)
+    
+    fold_dict = {
+            "full_path": fold_full_path,
+            f"{fold_method}plddt": plddts,
+            "file": fold_files,
+    }
+    
+    mpnn_dict = {
+            f"{if_method}perplexity": perps,
+            "file": mpnn_files,
+    }
+    
+    fold_df = pd.DataFrame(fold_dict)
+    mpnn_df = pd.DataFrame(mpnn_dict)
+    merged_df = pd.merge(fold_df, mpnn_df, on='file', how='inner') # merge on file name 
+
+    return fold_df, mpnn_df, merged_df
+
     
 def parse_csv(csv_path, return_names=False):
     """ Parse a CSV file and return the 'sequence' column """
@@ -264,8 +317,9 @@ def write_queries(input_fasta):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-fasta", type=str, default='generated/queries.fasta') # use queries.fasta for MSA runs
+    parser.add_argument("--csv", action="store_true") # Use CSV input instead of fasta
+    parser.add_argument("--bad-kevin", action="store_true") # TODO clean up later ; fastas where kevin forgot to save > headers
     parser.add_argument("--output-path", type=str, default='generated/')  # where to save results
-    parser.add_argument("--restart", action="store_true")  # bypass running if/folding
     parser.add_argument("--msa", action="store_true")  # will extract queries
     parser.add_argument("--fold-method", type=str, default='omegafold')
     parser.add_argument("--if-method", type=str, default='proteinmpnn')
@@ -274,9 +328,8 @@ def main():
     parser.add_argument("--esmfold-chunk-size", type=int, default=32)
     parser.add_argument("--esmfold-filter-seqs", action="store_true")
     parser.add_argument("--short-or-long", type=str, default='all') # short < 800, long >= 800 for running on <40GB gpu, `all` dont filter
-    parser.add_argument("--bad-kevin", action="store_true") # TODO clean up later
     parser.add_argument("--skip-folding", action="store_true") # TODO clean up later
-    parser.add_argument("--csv", action="store_true") # Use CSV input
+    parser.add_argument("--skip-if", action="store_true")  # bypass running if/folding
 
     args = parser.parse_args()
     
@@ -328,84 +381,38 @@ def main():
         
 
     # Run inverse_fold
-    # pdb_index = run_inversefold(args.input_path, method="esmif")
     if_temps = [1, 0.5, 0.1]
     pdb_indices = {}
     mpnn_output_paths = {}
 
-    if_method = 'mpnn'
+    if_method = 'mpnn' # TODO Might break with esmfold - have not tested 
     for t in if_temps:
         output_folder = os.path.join(args.output_path, args.fold_method + if_method + '_iftemp_' + str(t) + "/")
         pdb_files = os.listdir(pdb_path)
         os.makedirs(output_folder, exist_ok=True)
         pdb_indices[t] = [(i, os.path.join(pdb_path, input_pdb)) for (i, input_pdb) in enumerate(pdb_files)]
         mpnn_output_paths[t] = output_folder
-        if not args.restart:
+        if not args.skip_if:
             run_inversefold(pdb_path, output_folder, pdb_files, method=if_method, temperature=t)
 
 
-    # Eval sequences
-    all_results = []  # Will store all dataframes to concatenate at the end
-    
+    # Compile results 
+    all_results = []
     for t in if_temps:
-        plddts = []
-        perps = []
-        fold_files = []
-        mpnn_t = []
-        mpnn_files = []
-        for i, f in pdb_indices[t]: # equal number of mpnn and pdb file outputs - concat on filename later 
-            if os.path.exists(f):
-                plddts.append(get_bfactor(f))
-                fold_files.append(f.split('/')[-1].split('.pdb')[0])
-
-            else: 
-                raise("Missing PDB files")
-            if os.path.exists(mpnn_output_paths[t]):
-                mpnn_file = os.path.join(mpnn_output_paths[t], str(i), "scores")
-                all_score_files = os.listdir(mpnn_file)
-                for mpnn_file in all_score_files:
-                    perp = get_mpnn_perp(mpnn_file)
-
-                    mpnn_files.append(mpnn_file.split('/')[-1].split('.npz')[0])
-                    mpnn_t.append(t)
-                    perps.append(perp)
-            else: 
-                raise("Missing MPNN files")
-
-        fold_dict = {
-        "plddt": plddts,
-        "file": fold_files,
-        }
-
-        print(len(mpnn_files), len(fold_files))
-        #print(len(fold_t), len(fold_minp), len(fold_idx), len(plddts))
-
-        mpnn_dict = {
-                "temp": mpnn_t,
-                # "minp": mpnn_minp, 
-                # "idx": mpnn_idx,
-                "perplexity": perps,
-                "file": mpnn_files,
-        }
-
-        fold_df = pd.DataFrame(fold_dict)
-        mpnn_df = pd.DataFrame(mpnn_dict)
-        
-        merged_df = pd.merge(fold_df, mpnn_df, on='file', how='inner')
+        all_files, all_mpnn_files = get_all_paths(pdb_path, mpnn_output_paths[t])
+        _, _, merged_df = results_to_pandas(all_files, all_mpnn_files, fold_method=args.fold_method, if_method=args.if_method)
         # Add a column for the iftemp value
-        merged_df['iftemp'] = t
-        
-        # Store the dataframe for later concatenation
+        merged_df['if_temp'] = t
         all_results.append(merged_df)
-    
+
     # Combine all results into a single dataframe
     if all_results:
         final_df = pd.concat(all_results, ignore_index=True)
         # Write to a single CSV file
-        csv_path = os.path.join(args.output_path, "merge_data.csv")
+        csv_path = os.path.join(args.output_path, args.fold_method + "_" + args.if_method + "_merge_data.csv")
         final_df.to_csv(csv_path, index=False)
         print(f"All results saved to {csv_path}")
-
-
+    
+    
 if __name__ == "__main__":
     main()
