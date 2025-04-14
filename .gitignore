@@ -1,6 +1,7 @@
 data/
 outputs/
 hf_repo/
+notebooks/sample_huggingface_code.ipynb
 
 #AMLT
 .amlt*
