@@ -37,7 +37,7 @@ load_dotenv()
 files = list_repo_files(repo_id, repo_type=repo_type,token=os.getenv("HF_TOKEN"))
 
 
-print("checking file names match")
+print("Missing files in hub")
 print(set(local_file_names) - set(files))
 
 total_size_bytes = 0

@@ -1,3 +1,83 @@
 [build-system]
 requires = ["setuptools >= 77.0.3"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "dayhoff"
+version = "0.0.0"
+description = "Python package for generation of protein sequences and evolutionary alignments via discrete diffusion models"
+readme = "README.md"
+requires-python = ">=3.10.16"
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+authors = [
+    { name = "Your Name or Team", email = "your@email.com" }
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [
+"torch-geometric",
+"torch-scatter",
+"torch",
+"causal-conv1d",
+"mamba-ssm",
+
+"transformers",
+"datasets",
+
+"biopython",
+"biotite",
+"blosum",
+"fair-esm",
+"evodiff",
+"sequence-models",
+
+"pandas",
+"numpy",
+"lmdb",
+"mdanalysis",
+"python-dotenv",
+"matplotlib",
+"seaborn",
+"h5py",
+"scikit-learn",
+"scipy",
+
+"mlflow",
+"pdb-tools",
+"wandb",
+"tqdm",
+
+"ijson",
+"pyfastx",
+"huggingface_hub",
+
+"azure-identity",
+
+]
+
+[project.optional-dependencies]
+
+
+[project.urls]
+Homepage = "https://github.com/microsoft/dayhoff"
+Issues = "https://github.com/microsoft/dayhoff/issues"
+HuggingFaceDatasets = "https://huggingface.co/datasets/microsoft/DayhoffDataset"
+HuggingFaceModels = "https://huggingface.co/microsoft/Dayhoff"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dayhoff*"]
+
+[tool.setuptools.package-data]
+"" = ["config/*"]
+
+[tool.flake8]
+max-line-length = 120
+ignore = ["E203"]
