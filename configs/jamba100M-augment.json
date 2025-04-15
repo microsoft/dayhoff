@@ -24,7 +24,7 @@
   "pad_to_multiple_of": 8,
   "max_batch_size": 6000,
   "bucket_size": 10000,
-  "lr": 4e-4,
+  "lr": 4e-
   "warmup_steps": 16000,
   "activation_checkpointing": 0,
   "flip_prob": 0.5,
