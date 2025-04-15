@@ -2,10 +2,12 @@ import os
 from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import seaborn as sns
 import numpy as np
 from scipy.stats import pearsonr
 
+_ = sns.set_theme(font_scale=1.2)
 _ = sns.set_style('white')
 
 in_dir = "/home/kevyan/generations/pfam_annotations/"
@@ -200,13 +202,12 @@ scn_vector = np.array([scn_counter[d] for d in all_domains])
 un_vector = np.array([un_counter[d] for d in all_domains])
 input_dict = {
     "UniRef50": ur_vector,
-    "DayhoffRef": dr_vector,
+    "GGR": r_vector,
     "GGR-singles": s_vector,
-    "GGR-reps": r_vector,
     "BBR-sc": sc_vector,
-    "BBR-novel": n_vector,
-    "BBR-novel-sc": scn_vector,
-    "BBR-unfiltered": un_vector,
+    "BBR-n": scn_vector,
+    "BBR-u": un_vector,
+    "DayhoffRef": dr_vector,
 }
 keys = list(input_dict.keys())
 for i, k1 in enumerate(keys):
@@ -216,8 +217,10 @@ for i, k1 in enumerate(keys):
         v2 = input_dict[k2]
         fig, ax = plt.subplots(1, 1)
         _ = ax.plot(v1, v2, '.', alpha=0.3, color='gray')
-        _ = ax.set_xlabel("# in %s" %k1)
-        _ = ax.set_ylabel("# in %s" %k2)
+        _ = ax.set_xlabel("Occurences in %s" %k1)
+        _ = ax.set_ylabel("Occurences in %s" %k2)
+        ax.xaxis.set_major_locator(ticker.MultipleLocator(10000))
+
         _ = fig.savefig(os.path.join(in_dir, "pfam_annotations", "pfam_counts_%s_%s.pdf" %(k1, k2)), dpi=300, bbox_inches='tight')
         r = pearsonr(v1, v2)[0]
         print(k1, k2, r)

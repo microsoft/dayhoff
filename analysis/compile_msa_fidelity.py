@@ -11,7 +11,8 @@ from sequence_models.utils import parse_fasta
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-_ = sns.set_style('white')
+sns.set_theme(font_scale=1.2)
+sns.set_style('white')
 
 base_path = "/home/kevyan/generations/queries_from_homologs"
 
@@ -186,6 +187,19 @@ for cdf in cdfs:
     _ = ax.set_xlabel(cdfs[cdf][1])
     _ = ax.set_ylabel('Percentile')
     _ = fig.savefig(os.path.join(base_path, "%s.pdf" %cdf), bbox_inches='tight', dpi=300)
+
+fig, ax = plt.subplots()
+_ = sns.scatterplot(df[df['model'].isin(["natural", "gap_1.0_0.05_nom", "indel_1.0_0.05_nom"])], x="plddt", y='perplexity', hue='model',
+                    palette=model_to_hue, ax=ax, alpha=0.7)
+_ = ax.set_xlabel('pLDDT')
+_ = ax.set_ylabel('scPerplexity')
+leg = ax.get_legend()
+leg.set_title("")
+for t in leg.texts:
+    t.set_text(models_to_plot[t.get_text()])
+_ = fig.savefig(os.path.join(base_path, "dayhoff_plddt_vs_scp.pdf"),
+                bbox_inches='tight', dpi=300)
+
 
 df[df['model'] == "indel_1.0_0.05_nom"].sort_values('plddt', ascending=False).head()[['plddt', 'file', 'seq_id']]
 
