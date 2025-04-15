@@ -232,4 +232,3 @@ _ = sns.lineplot(plot_me, x='temperature', y='protbert_fd_to_gigaref',
 _ = axs[1].axhline(pb_fpd_dict['gigaref_test:gigaref_train'], color='gray')
 _ = axs[1].legend(bbox_to_anchor=(1.1, 1.))
 _ = fig.savefig('/home/kevyan/generations/protbert_fpd.png', dpi=300, bbox_inches='tight')
-df[df['name'] == '3b-msa-uniref90-cooldown'][['direction', 'temperature', 'protbert_fd_to_uniref']]

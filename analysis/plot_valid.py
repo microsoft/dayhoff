@@ -199,44 +199,17 @@ model_name = {
     'jamba-3b-cooldown7': 'Dayhoff-3B'
 }
 tasks = ["indel", "gap"]
-# total_steps = 0
-# direction = 'forward'
-# out_fpath = '/home/kevyan/generations/'
-# pal = sns.color_palette()
-# fig1, ax1 = plt.subplots(1, 1)
-# ax2 = ax1.twinx()
-# pal_counter = 0
-# for task in tasks:
-#     for i, checkpoint in enumerate(checkpoints[model]):
-#         ces = []
-#         for rank in range(world_size):
-#             out_file = os.path.join(out_fpath, "valid_" + model + '_' + str(checkpoint) + "_" + task + "_" + direction + "_%d.pt" %rank)
-#             dat = torch.load(out_file)
-#             ces.append(dat["ce"])
-#         ces = torch.cat(ces)
-#         ces = np.array(ces)
-#         ces[ces == 0] = np.nan
-#         ces = ces[:, :65000]
-#         ce_by_pos = np.nanmean(ces, axis=0)
-#         x = np.arange(len(ce_by_pos))
-#         _ = ax1.plot(x, ce_by_pos, "-", label=task, color=pal[pal_counter], alpha=0.7)
-#         pal_counter += 1
-#         # _ = ax1.fill_between(x, ce_by_pos + se_by_pos, ce_by_pos - se_by_pos, alpha=0.3, color=pal[i])
-#     n = np.isfinite(ces).sum(axis=0)
-#     _ = ax2.plot(x, n, "-", color="gray", alpha=0.7)
-# _ = ax1.set_xlabel('position')
-# _ = ax1.set_ylabel('cross-entropy')
-# _ = ax1.legend()
-# _ = ax2.set_ylabel('n')
-# _ = fig1.savefig(os.path.join(out_fpath, "jamba-3b-combined" + "msas" + "_" + direction + ".png"), dpi=300, bbox_inches="tight")
+out_fpath = '/home/kevyan/generations/validation'
+
 
 checkpoint = checkpoints[model][0]
 direction = "forward"
 df = pd.DataFrame()
 current_row = 0
 current_msa_id = 0
-for task in ['gap']:
-    for rank in range(7):
+for task in ["indel"]:
+    for rank in [2, 3, 4, 5, 6, 7]:
+    # for rank in range(7):
         out_file = os.path.join(out_fpath, "valid_long_" + model + '_' + str(
             checkpoint) + "_" + task + "_" + direction + "_%d.pt" % rank)
         print(out_file)
@@ -255,12 +228,16 @@ for task in ['gap']:
                     current_ce = ce[current_pos:break_idx].mean().item()
                     if current_seqs == 0:
                         first_ce = current_ce
-                    df.loc[current_row, 'msa_id'] = int(current_msa_id)
-                    df.loc[current_row, 'n_conditioning'] = current_seqs
-                    df.loc[current_row, 'ce'] = current_ce
-                    df.loc[current_row, 'ce_diff'] = current_ce - first_ce
-                    df.loc[current_row, 'task'] = task
-                    current_row += 1
+                        first_perplexity = np.exp(current_ce)
+                    if current_seqs < 65:
+                        df.loc[current_row, 'msa_id'] = current_msa_id
+                        df.loc[current_row, 'n_conditioning'] = current_seqs
+                        df.loc[current_row, 'ce'] = current_ce
+                        df.loc[current_row, 'perplexity'] = np.exp(current_ce)
+                        df.loc[current_row, 'perplexity_diff'] = np.exp(current_ce) - first_perplexity
+                        df.loc[current_row, 'ce_diff'] = current_ce - first_ce
+                        df.loc[current_row, 'task'] = task
+                        current_row += 1
                     current_seqs += 1
                     current_pos = break_idx + 1
             elif task == 'gap':
@@ -292,10 +269,14 @@ for task in ['gap']:
                         ce_mean = reshaped_ce.mean(axis=1)
                         ce_mean = np.concatenate([first_mean, ce_mean])
                 ce_mean_norm = ce_mean - ce_mean[0]
+                perplexity_mean = np.exp(ce_mean)
+                perplexity_mean_norm = perplexity_mean - perplexity_mean[0]
                 df_current = pd.DataFrame()
-                df_current['msa_id'] = int(current_msa_id)
+                df_current['msa_id'] = current_msa_id
                 df_current['n_conditioning'] = np.arange(len(ce_mean_norm))
                 df_current['ce'] = ce_mean
+                df_current['perplexity'] = perplexity_mean
+                df_current['perplexity_diff'] = perplexity_mean_norm
                 df_current['ce_diff'] = ce_mean_norm
                 df_current['task'] = task
                 df = pd.concat([df, df_current], ignore_index=True)
