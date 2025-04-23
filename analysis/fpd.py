@@ -55,7 +55,7 @@ def calculate_fid(act1, act2, eps=1e-6):
     return fid
 
 # Baselines
-natural_sets = ['uniref_train', 'uniref_valid', 'gigaref_train', 'gigaref_test']
+natural_sets = ['uniref_train', 'uniref_valid', 'gigaref_train', 'gigaref_test', 'gigaref_singletons']
 # natural_sets = ['train_GO', 'test_GO']
 natural_files = {
     'uniref_train': 'uniref50_202401_train_10k',
@@ -64,6 +64,7 @@ natural_files = {
     'uniref_rtest': 'uniref50_202401_rtest_10k',
     'gigaref_train': 'gigaref_train_10k',
     'gigaref_test': 'gigaref_test_10k',
+    'gigaref_singletons': 'ggr_singles_10k',
     'train_GO': 'train_GO',
     'test_GO': 'test_10000_GO'
 }
@@ -106,6 +107,26 @@ for i, s in enumerate(natural_sets):
             print(s, s2, mmd, fpd)
             pb_mmd_dict[s + ':' + s2] = mmd
             pb_fpd_dict[s + ':' + s2] = fpd
+
+rfd_sets = [
+    "both_filter",
+    "scrmsd",
+    "unfiltered",
+    "novelty"
+]
+df = pd.DataFrame(columns=[
+    'name',
+    'protbert_fd_to_uniref',
+    'protbert_fd_to_gigaref',
+])
+for i, rfd_set in enumerate(rfd_sets):
+    emb = h5py.File(pb_embedding_dir + "rfdiffusion_" + rfd_set + '.h5')
+    emb = np.array([emb[k] for k in emb.keys()])
+    df.loc[i, 'name'] = rfd_set = rfd_set
+    df.loc[i, 'protbert_fd_to_uniref'] = calculate_fid(emb, pb_embedding_dict['uniref_valid'])
+    df.loc[i, 'protbert_fd_to_gigaref'] = calculate_fid(emb, pb_embedding_dict['gigaref_test'])
+df.to_csv('/home/kevyan/generations/rfdiffusion_fpd.csv', index=False)
+df
 
 models = os.listdir(embedding_dir)
 models = [m for m in models if 'jamba' in m]
@@ -211,4 +232,3 @@ _ = sns.lineplot(plot_me, x='temperature', y='protbert_fd_to_gigaref',
 _ = axs[1].axhline(pb_fpd_dict['gigaref_test:gigaref_train'], color='gray')
 _ = axs[1].legend(bbox_to_anchor=(1.1, 1.))
 _ = fig.savefig('/home/kevyan/generations/protbert_fpd.png', dpi=300, bbox_inches='tight')
-df[df['name'] == '3b-msa-uniref90-cooldown'][['direction', 'temperature', 'protbert_fd_to_uniref']]
