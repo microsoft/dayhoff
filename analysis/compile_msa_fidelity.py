@@ -5,7 +5,7 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from Bio.Align import PairwiseAligner
-from scipy.stats import pearsonr
+from scipy.stats import ttest_rel
 from dayhoff.analysis_utils import results_to_pandas, get_all_paths, run_tmscore
 from sequence_models.utils import parse_fasta
 
@@ -17,9 +17,12 @@ sns.set_style('white')
 base_path = "/home/kevyan/generations/queries_from_homologs"
 
 models = ["natural", "xlstm", "evodiff", "evodiff_nom",
-          "gap_1.0_0.01", "gap_1.2_0.01", "gap_1.0_0.00", "gap_1.1_0.05", "gap_1.0_0.00_nom", "gap_1.0_0.05_nom",
-          "ccmgen", "ccmgen_short",
-          "indel_1.0_0.00", "indel_1.2_0.01", "indel_1.0_0.01", "indel_1.1_0.05", "indel_1.0_0.00_nom", "indel_1.0_0.05_nom"]
+          # "gap_1.0_0.01", "gap_1.2_0.01", "gap_1.0_0.00", "gap_1.1_0.05", "gap_1.0_0.00_nom",
+          "gap_1.0_0.05_nom",
+          "ccmgen",
+          # "ccmgen_short",
+          # "indel_1.0_0.00", "indel_1.2_0.01", "indel_1.0_0.01", "indel_1.1_0.05", "indel_1.0_0.00_nom",
+          "indel_1.0_0.05_nom"]
 raw_dfs = []
 for m in models:
     pdb_paths, mpnn_paths = get_all_paths(os.path.join(base_path, "%s_structures/pdb/esmfold/" %m), os.path.join(base_path, "%s_structures/esmfoldmpnn_iftemp_1" %m))
@@ -27,15 +30,6 @@ for m in models:
     merged_df['model'] = m
     raw_dfs.append(merged_df)
 df = pd.concat(raw_dfs, ignore_index=True)
-# len(set(df[df['model'] == 'gap_1.2_0.01']['file']))
-# model_to_name = {
-#     "natural": "queries",
-#     "xlstm": "xlstm",
-#     "evodiff": "evodiff",
-#     "gap": "3b-cooled_25000_gap_t1.0_0.00",
-#     "ccmgen": "ccmgen",
-#     "indel": "3b-cooled_25000_indel_t1.0_0.00"
-# }
 model_to_name = {m: m for m in models}
 model_to_name['natural'] = 'queries'
 model_to_name['gap_1.0_0.01'] = '3b-cooled_25000_gap_t1.0_0.01'
@@ -67,11 +61,12 @@ with tqdm(total=len(df)) as pbar:
             gen_length = len(s)
             n_homologs = len(homologs)
             best_id = -1
+            if model == 'natural':
+                homologs = homologs[1:]
             for i, homolog in enumerate(homologs):
                 if i == 0:
                     query_length = len(homolog)
-                    if model == 'natural':
-                        continue
+
                 alignment = aligner.align(s, homolog)
                 if alignment.score > best_matches:
                     best_matches = alignment.score
@@ -110,41 +105,30 @@ df = pd.read_csv(os.path.join(base_path, "compiled_fidelities.csv"))
 
 
 
-print("model R(n_homologs, plddt)")
-for model in models:
-    df_lim = df[df['model'] == model]
-    print(model, pearsonr(df_lim['n_homologs'], df_lim['plddt']).statistic)
-
-print("model R(n_homologs, seq_id)")
-for model in models:
-    df_lim = df[df['model'] == model]
-    print(model, pearsonr(df_lim['n_homologs'], df_lim['seq_id']).statistic)
-
-print("model R(n_homologs, tmscore)")
-for model in models[1:]:
-    df_lim = df[df['model'] == model]
-    print(model, pearsonr(df_lim['n_homologs'], df_lim['tmscore']).statistic)
-
-print("model R(seq_id, tmscore)")
-for model in models[1:]:
-    df_lim = df[df['model'] == model]
-    print(model, pearsonr(df_lim['seq_id'], df_lim['tmscore']).statistic)
-
-
-grouped = df.groupby('model')
-grouped.seq_id.agg(['mean', 'std'])
-grouped.tmscore.agg(['mean', 'std'])
-grouped.plddt.agg(['mean', 'std'])
-grouped.perplexity.agg(['mean', 'std'])
-
 models_to_plot = {
     "natural": "Natural",
-    "ccmgen_short": "CCMgen",
+    "ccmgen": "CCMgen",
     "evodiff_nom": "EvoDiff-MSA",
     "xlstm": 'Prot-xLSTM',
         "gap_1.0_0.05_nom": "Alignment conditioning",
         "indel_1.0_0.05_nom": "Homolog conditioning"
 }
+
+grouped = df[['model', 'plddt', 'perplexity', 'tmscore', 'seq_id']].groupby('model')
+final_models = ["gap_1.0_0.05_nom", "indel_1.0_0.05_nom", "ccmgen", "xlstm", "evodiff_nom", "natural"]
+metrics = grouped.agg(['mean', 'std']).loc[final_models].reset_index()
+for i, row in metrics.iterrows():
+    print_me = [models_to_plot[row['model'].values[0]]]
+    for m in ['plddt', 'perplexity', 'tmscore', 'seq_id']:
+        print_me.append("$%.2f \\pm %.2f$" % (row[m]['mean'], row[m]['std']))
+    print_me = " & ".join(print_me) + "\\\\"
+    print(print_me)
+grouped.seq_id.agg(['mean', 'std'])
+grouped.tmscore.agg(['mean', 'std'])
+grouped.plddt.agg(['mean', 'std'])
+grouped.perplexity.agg(['mean', 'std'])
+
+
 pal = sns.color_palette()
 model_to_hue = {
     "natural": "gray",
@@ -209,3 +193,13 @@ df[df['file'] == '100335950'][['plddt', 'model', 'seq_id', 'gen_length', 'query_
 # 6202062 gap plddt 0.896246
 # A0A174Z1L0 indel plddt 0.941450 longer than query
 # 76841376 indel plddt 0.938367
+
+df.head()
+df.columns
+pivoted = {}
+for m in ['plddt', 'perplexity', 'tmscore', 'seq_id']:
+    df2 = df.pivot(index='file', columns='model', values=m)
+    for i, model1 in enumerate(final_models):
+        for model2 in final_models[i + 1:]:
+            if ttest_rel(df2[model1], df2[model2]).pvalue > 0.05:
+                print(m, model1, model2)
