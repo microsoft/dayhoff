@@ -1,0 +1,103 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dayhoff"
+version = "0.0.5"
+description = "Python package for generation of protein sequences and evolutionary alignments via discrete diffusion models"
+readme = "README.md"
+requires-python = ">=3.10.16"
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+authors = [
+    { name = "Sarah A. Alamdari"},
+    { name = "Neil Tenenholtz"},
+    { name = "Samir Char"},
+    { name = "Kaeli Kaymak-Loveless"},
+    { name = "Alex J. Lee"},
+    { name = "Garyk Brixi"},
+    { name = "Carles Domingo-Enrich"},
+    { name = "Nicolo Fusi"},
+    { name = "Kevin K. Yang", email = "kevyan@microsoft.com"},
+    { name = "Ava P. Amini", email = "ava.amini@microsoft.com"}
+]
+
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    # "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent"
+]
+
+dependencies = [ #TODO: can add optional dependencies
+# Basics
+'pandas~=2.2.3',
+'numpy~=1.26.4',
+# 'lmdb~=1.4.1',
+'mdanalysis~=2.7.0',
+'python-dotenv~=1.0.1', # to load env variables
+'matplotlib~=3.10.1',
+'seaborn~=0.13.2',
+'h5py~=3.13.0',
+'scikit-learn~=1.5.0',
+'scipy~=1.15.2',
+
+#Pytorch
+'torch-geometric~=2.5.2',
+'torch-scatter~=2.1.2',
+'transformers~=4.42.4',
+'datasets~=3.2.0', #for HF datasets
+# 'causal-conv1d>=1.4.0', #For jamba/mamba
+# 'mamba-ssm~=2.2.4', #For jamba/mamba
+# 'flash-attn~=2.7.4.post1', #Flash Attention
+
+#Bio
+'biopython~=1.83',
+# 'biotite~=0.40.0',
+'blosum~=2.0.3',
+'fair-esm~=2.0.0',
+'evodiff~=1.1.0',
+'sequence-models~=1.8.0',
+
+
+# logging debugging
+# 'mlflow',
+'pdb-tools~=2.5.0',
+'wandb~=0.16.6',
+'tqdm~=4.67.1',
+
+
+#Huggingface Hub
+'ijson~=3.3.0',
+'pyfastx~=2.2.0',
+'huggingface_hub~=0.27.1',
+
+#Azure
+'azure-identity~=1.21.0'
+]
+
+# [project.optional-dependencies]
+
+
+[project.urls]
+Homepage = "https://github.com/microsoft/dayhoff"
+Repository = "https://github.com/microsoft/dayhoff"
+Issues = "https://github.com/microsoft/dayhoff/issues"
+
+# May need to remove this
+HuggingFaceDatasets = "https://huggingface.co/datasets/microsoft/DayhoffDataset"
+HuggingFaceModels = "https://huggingface.co/microsoft/Dayhoff"
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dayhoff*"]
+
+[tool.setuptools.package-data]
+dayhoff = ["config/*"]
+
+[tool.flake8]
+max-line-length = 120
+ignore = ["E203"]

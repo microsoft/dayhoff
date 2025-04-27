@@ -13,6 +13,10 @@ import torch.nn as nn
 from evodiff.utils import Tokenizer
 from dayhoff.model import _get_hf_model, ARDiffusionModel
 from dayhoff.constants import UL_ALPHABET_PLUS
+# from torch.serialization import add_safe_globals
+# import numpy.core.multiarray
+
+# add_safe_globals({'scalar': numpy.core.multiarray.scalar})
 
 
 def cosine_anneal_with_warmup(n_warmup_steps, n_anneal_steps, final_ratio=0.0):
@@ -39,7 +43,7 @@ def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Option
     return ckpt_path
 
 
-def load_msa_config_and_model(config_fpath, alphabet=UL_ALPHABET_PLUS, use_flash_attention_2=True):
+def load_msa_config_and_model(config_fpath, alphabet=UL_ALPHABET_PLUS, use_flash_attention_2=False):
     with open(config_fpath, "r") as f:
         config = json.load(f)
 
@@ -148,11 +152,11 @@ def load_checkpoint(
             )
         if os.path.exists(os.path.join(ckpt_path, "scheduler%d.pt" %rank)):
             sd = torch.load(
-                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu")
+                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu"), #weights_only=False
             )
         elif os.path.exists(os.path.join(ckpt_path, "scheduler.pt")):
             sd = torch.load(
-                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
+                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu"), #weights_only=False
             )
         else:
             return 0, 0, 0, 0, 0
