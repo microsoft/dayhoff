@@ -164,5 +164,5 @@ trademarks or logos is subject to and must follow
 Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
 Any use of third-party trademarks or logos are subject to those third-party's policies.
 
-## Disclaimer
+## Intended use
 The [software/model] described in this repository is provided for research and development use only. The [software/model] is not intended for use in clinical decision-making or for any other clinical use, and the performance of model for clinical use has not been established. You bear sole responsibility for any use of this [software/model], including incorporation into any product intended for clinical use. 
