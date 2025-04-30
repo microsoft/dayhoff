@@ -1,4 +1,20 @@
-# Project
+# Dayhoff
+
+# Table of Contents
+* [Description](#Description)
+* [Installation](#Installation)
+	* [Mamba-ssm and causal-conv1d recommendations](#Mamba-ssm-and-causal-conv1d-recommendations)
+* [Code and Data Availability](#Code-and-Data-Availability)
+	* [Available models](#Available-models)
+	* [Available datasets](#Available-datasets)
+* [Unconditional generation](#Unconditional-generation)
+* [Homologue-conditioned generation](#Homologue-conditioned-generation)
+* [Analysis scripts](#Analysis-scripts)
+* [Contributing](#Contributing)
+* [Trademarks](#Trademarks)
+* [Intended use](#Intended-use)
+
+
 ## Description
 
 In this work, we combined genomic-derived protein sequences, metagenomics, structure-based synthetic sequences, and MSAs to create the Dayhoff Atlas of protein data and language models. 
@@ -12,7 +28,9 @@ Larger models, metagenomic sequences, and structure-based augmentation all incre
 Finally, we generated, characterized, and release 16M synthetic sequences as DayhoffRef
 
 <!-- insert preprint link -->
-Dayhoff is described in this [preprint](preprint); if you use the code from this repository or the results, please cite the preprint 
+Dayhoff is described in this [preprint](preprint); if you use the code from this repository or the results, please cite the preprint.
+
+
 
 ## Installation
 **Requirements**: 
@@ -51,18 +69,24 @@ git checkout v2.2.4 # current latest version tag
 CAUSAL_CONV1D_FORCE_BUILD=TRUE CAUSAL_CONV1D_SKIP_CUDA_BUILD=TRUE CAUSAL_CONV1D_FORCE_CXX11_ABI=TRUE pip install --no-build-isolation .
 ```
 
+### Docker
 
-## Code and Data Availability
+```bash
+docker pull samirchar/dayhoff:latest
+docker run -it samirchar/dayhoff:latest
+```
+
+## Code and data availability
 All the datasets and models are hosted in Hugging Face 🤗.
 * Datasets: https://huggingface.co/datasets/Microsoft/DayhoffDataset
 * Models: https://huggingface.co/Microsoft/Dayhoff
 
 ### Available models
-The available models in Hugging Face 🤗 are:
+The available models in Hugging Face are:
 * **170M-parameter models:** 170m-GGR, 170m-UR50, 170m-UR90, 170m-UR50-BBR-s, 170m-UR50-BBR-u, 170m-UR50-BBR-n
 * **3B-parameter models:** 3b-GGR-MSA, 3b-UR90, 3b-cooled
 
-The following table provides details about each model
+The following table provides details about each model:
 ![dayhoff models](assets/dayhoff_models.png)
 
 ### Available datasets
@@ -120,27 +144,60 @@ For the largest datasets, consider using streaming = True.
 
 We provide two scripts with different complexity and functionality.
 
-For a simple script that covers most use cases, use src/generate.py. Below is a sample code to generate 10 sequence with at most 100 residues:
+For a simple script that covers most use cases, use [src/generate.py](https://github.com/microsoft/dayhoff/blob/main/src/generate.py). Below is a sample code to generate 10 sequence with at most 100 residues:
 
 ```bash
-python src/generate.py --out-dir generations --model 170m-UR50-BBR-n --max-length 100 --n-generations 10 --temp 1.0 --min-p 0.0 --random-seed 1 --no-fa2
+python src/generate.py --out-dir generations --model 170m-UR50-BBR-n --max-length 100 --n-generations 10 --temp 1.0 --min-p 0.0 --random-seed 1 
 ```
 
-For the exact script used in the paper consider using the analysis/generate.py script. Sample code:
+For the exact script used in the paper consider using the [analysis/generate.py](https://github.com/microsoft/dayhoff/blob/main/analysis/generate.py):  script. Sample code:
 
 ```bash
-python analysis/generate.py checkpoints/jamba-170m-seqsam-36w/ data jamba-170m-seqsam-36w --n_generations=5
+python analysis/generate.py checkpoints/jamba-170m-seqsam-36w/ generations jamba-170m-seqsam-36w --n_generations 5
 ```
 
 ## Homologue-conditioned generation
 
-The generate_from_homologs script performs sequence generation conditioned on evolutionarily-related homologous sequences modeled as multiple sequence alignments (MSAs)
+The [generate_from_homologs](https://github.com/microsoft/dayhoff/blob/main/src/generate_from_homologs.py) script performs sequence generation conditioned on evolutionarily-related homologous sequences modeled as multiple sequence alignments (MSAs)
 
 The following code specifies the folder where MSAs in fasta format are stored and selects two specific MSAs for conditional generation. The list of MSAs within the MSAs dir can also be specified via an --include-pattern argument.
 
 ```bash
-python src/generate_from_homologs.py --model 3b-GGR-MSA --msas-dir MSAs --task sequence --out-dir generations --msa-file-names 100220484.fasta 10123434.fasta --temp 1.0 --min-p 0.0 --max-length 768 --random-seed 1 --no-fa2
+python src/generate_from_homologs.py --model 3b-GGR-MSA --msas-dir MSAs --task sequence --out-dir generations --msa-file-names 100220484.fasta 10123434.fasta --temp 1.0 --min-p 0.0 --max-length 768 --random-seed 1 
 ```
+
+## Analysis scripts
+
+The following list briefly describes the functionality of the most important scripts used to produce the results of the paper:
+* [clusters.py](https://github.com/microsoft/dayhoff/blob/main/analysis/clusters.py): 
+* [compile_cas9_fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_cas9_fidelity.py): 
+* [compile_dayhoffref.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_dayhoffref.py): 
+* [compile_msa_fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_msa_fidelity.py): 
+* [create-fasta-sample.py](https://github.com/microsoft/dayhoff/blob/main/analysis/create-fasta-sample.py): 
+* [embed.py](https://github.com/microsoft/dayhoff/blob/main/analysis/embed.py): 
+* [evodiff_msa.py](https://github.com/microsoft/dayhoff/blob/main/analysis/evodiff_msa.py): 
+* [extract_test_fastas.py](https://github.com/microsoft/dayhoff/blob/main/analysis/extract_test_fastas.py): 
+* [fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/fidelity.py): 
+* [fpd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/fpd.py): 
+* [generate_cas9.py](https://github.com/microsoft/dayhoff/blob/main/analysis/generate_cas9.py): 
+* [gigaref.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref.py): 
+* [gigaref_clusters.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_clusters.py): 
+* [gigaref_singles.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_singles.py): 
+* [gigaref_to_jsonl.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_to_jsonl.py): 
+* [mmd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/mmd.py): 
+* [pfam.py](https://github.com/microsoft/dayhoff/blob/main/analysis/pfam.py): 
+* [pick_test_msas.py](https://github.com/microsoft/dayhoff/blob/main/analysis/pick_test_msas.py): 
+* [plot_metrics.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_metrics.py): 
+* [plot_valid.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_valid.py): 
+* [plot_zs.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_zs.py): 
+* [protmamba.py](https://github.com/microsoft/dayhoff/blob/main/analysis/protmamba.py): 
+* [query_from_homologs.py](https://github.com/microsoft/dayhoff/blob/main/analysis/query_from_homologs.py): 
+* [sample-clustered-splits.py](https://github.com/microsoft/dayhoff/blob/main/analysis/sample-clustered-splits.py): 
+* [sample_uniref.py](https://github.com/microsoft/dayhoff/blob/main/analysis/sample_uniref.py): 
+* [taxonomy.py](https://github.com/microsoft/dayhoff/blob/main/analysis/taxonomy.py): 
+* [xlstm.py](https://github.com/microsoft/dayhoff/blob/main/analysis/xlstm.py): 
+* [zeroshot.py](https://github.com/microsoft/dayhoff/blob/main/analysis/zeroshot.py): 
+
 
 ## Contributing
 

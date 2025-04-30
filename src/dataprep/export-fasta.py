@@ -1,6 +1,5 @@
 import os.path as osp
 import os
-import shutil
 
 is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
 
@@ -12,7 +11,6 @@ from datasets import Dataset, DatasetDict, disable_caching, is_caching_enabled
 from typing import Literal
 from multiprocessing import cpu_count
 import ijson
-from dotenv import load_dotenv
 
 def json_generator(json_path, key):
     with open(json_path,'r') as f: 

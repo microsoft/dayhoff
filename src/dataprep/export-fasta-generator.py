@@ -1,32 +1,14 @@
 import os.path as osp
 import os
-import shutil
-from datasets import disable_caching
-# disable_caching()
 is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
-# cache_dir = os.path.join("/mnt/blob/", "hf_cache")
-# os.makedirs(cache_dir, exist_ok=True) #Give read and write permissions to all users
-# os.environ["HF_HOME"] = cache_dir
-
-# if is_amlt:
-#     os.environ["HF_DATASETS_CACHE"] = cache_dir
-#     os.environ["TRANSFORMERS_CACHE"] = cache_dir
-#     os.environ["HUGGINGFACE_HUB_CACHE"] = cache_dir
-#     print("HF_HOME set to: ", os.environ["HF_HOME"])
-#     print("blobfuse cache dir exists: ",os.path.exists(os.path.join(os.environ["AMLT_OUTPUT_DIR"],"mount_cache")))
-#     free_cache_dir_space = shutil.disk_usage(cache_dir).free
-#     print("Free space in cache dir: ", free_cache_dir_space)
-#
 
 import argparse
-from glob import glob, has_magic
 import pyfastx
 import json
 from datasets import Dataset, DatasetDict, is_caching_enabled
 from typing import Literal
 from multiprocessing import cpu_count
 import ijson
-from dotenv import load_dotenv
 
 def json_generator(json_path, key):
     with open(json_path,'r') as f: 
