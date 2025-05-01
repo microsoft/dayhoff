@@ -70,9 +70,12 @@ CAUSAL_CONV1D_FORCE_BUILD=TRUE CAUSAL_CONV1D_SKIP_CUDA_BUILD=TRUE CAUSAL_CONV1D_
 ```
 
 ### Docker
+<!-- May be better to host in a MS docker account -->
+
+For a fully functional containerized environment without needing to install dependencies manually, you can use the provided Docker image instead:
 
 ```bash
-docker pull samirchar/dayhoff:latest
+docker pull samirchar/dayhoff:latest 
 docker run -it samirchar/dayhoff:latest
 ```
 
@@ -95,17 +98,17 @@ All datasets in Hugging Face are available in three formats: FASTA, Arrow, and J
 <!-- Add split sizes GB -->
 The datasets are:
 * **GigaRef (no singletons = clustered)**.
-    * Splits: train, test
+    * Splits: train (433 GB), test (22 MB)
 * **GigaRef (only singletons)**
-    * Splits: train
+    * Splits: train (282 GB)
 * **UniRef50**
-    * Splits: train, test, rtest, valid
+    * Splits: train (25 GB), test (31 MB), rtest (26 MB), valid (26 MB)
 * **UniRef90**
-    * Splits: train, test, rtest, valid
+    * Splits: train (83 GB), test (142 MB), rtest (90 MB), valid (87 MB)
 * **DayhoffRef**
-    * Splits: train
+    * Splits: train (5 GB)
 * **BackboneRef**
-    * Splits: rfdiffusion_unfiltered (BBR-u), rfdiffusion_scrmsd (BBR-s), rfdiffusion_novelty (BBR-n)
+    * Splits: rfdiffusion_unfiltered (BBR-u; 3 GB), rfdiffusion_scrmsd (BBR-s; 3 GB), rfdiffusion_novelty (BBR-n; 3 GB)
 
 To read any of the datasets use Hugging Face's load_dataset, which will use the Arrow format for maximum efficieny. Below are some examples on how to load the datasets:
 
@@ -137,8 +140,6 @@ dayhoffref = load_dataset("microsoft/DayhoffDataset",
 ```
 
 For the largest datasets, consider using streaming = True.
-
-
 
 ## Unconditional generation
 
