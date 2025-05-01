@@ -1,44 +1,44 @@
 # Basics
-pandas~=2.2.3,
-numpy~=1.26.4,
-# lmdb~=1.4.1,
-mdanalysis~=2.7.0,
-python-dotenv~=1.0.1, # to load env variables
-matplotlib~=3.10.1,
-seaborn~=0.13.2,
-h5py~=3.13.0,
-scikit-learn~=1.5.0,
-scipy~=1.15.2,
+pandas~=2.2.3
+numpy~=1.26.4
+# lmdb~=1.4.1
+mdanalysis~=2.7.0
+python-dotenv~=1.0.1 # to load env variables
+matplotlib~=3.10.1
+seaborn~=0.13.2
+h5py~=3.13.0
+scikit-learn~=1.5.0
+scipy~=1.15.2
 
 #Pytorch
-torch-geometric~=2.5.2,
-torch-scatter~=2.1.2,
-transformers~=4.42.4,
-datasets~=3.2.0, #for HF datasets
-# causal-conv1d>=1.2.0, #For jamba/mamba
-# mamba-ssm~=2.2.4, #For jamba/mamba
-# flash-attn~=2.7.4.post1, #Flash Attention
+torch-geometric~=2.5.2
+torch-scatter~=2.1.2
+transformers~=4.42.4
+datasets~=3.2.0 #for HF datasets
+# causal-conv1d>=1.4.0 #For jamba/mamba
+# mamba-ssm~=2.2.4 #For jamba/mamba
+# flash-attn~=2.7.4.post1 #Flash Attention
 
 #Bio
-biopython~=1.83,
-# biotite~=0.40.0,
-blosum~=2.0.3,
-fair-esm~=2.0.0,
-evodiff~=1.1.0,
-sequence-models~=1.8.0,
+biopython~=1.83
+# biotite~=0.40.0
+blosum~=2.0.3
+fair-esm~=2.0.0
+evodiff~=1.1.0
+sequence-models~=1.8.0
 
 
 # logging debugging
-# mlflow,
-pdb-tools~=2.5.0,
-wandb~=0.16.6,
-tqdm~=4.67.1,
+# mlflow
+pdb-tools~=2.5.0
+wandb~=0.16.6
+tqdm~=4.67.1
 
 
 #Huggingface Hub
-ijson~=3.3.0,
-pyfastx~=2.2.0,
-huggingface_hub~=0.27.1,
+ijson~=3.3.0
+pyfastx~=2.2.0
+huggingface_hub~=0.27.1
 
 #Azure
 azure-identity~=1.21.0
