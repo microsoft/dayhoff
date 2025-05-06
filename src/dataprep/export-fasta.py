@@ -1,6 +1,5 @@
 import os.path as osp
 import os
-import shutil
 
 is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
 
@@ -12,8 +11,6 @@ from datasets import Dataset, DatasetDict, disable_caching, is_caching_enabled
 from typing import Literal
 from multiprocessing import cpu_count
 import ijson
-from dotenv import load_dotenv
-from azure.identity import ManagedIdentityCredential, DefaultAzureCredential
 
 def json_generator(json_path, key):
     with open(json_path,'r') as f: 
@@ -118,35 +115,7 @@ if __name__ == "__main__":
     save_to_azure_blob = False #Save directly to Azure blob storage instead of disk. Save to disk will also save in azure storage if the blob is mounted but will ocupy disk space. This may be a bad idea for large datasets.
     storage_options = None
 
-    if args.azure_storage_account_name is not None and args.azure_storage_container_name is not None:
-        #Check required env variables exist for connection AZURE_CLIENT_ID and AZURE_TENANT_ID
-        load_dotenv()
-        if os.environ.get("AZURE_CLIENT_ID", None) is None or os.environ.get("AZURE_TENANT_ID", None) is None:
-            raise ValueError("AZURE_CLIENT_ID and AZURE_TENANT_ID must be set in the environment variables. Add them to .env. These are found in the user assigned managed identity in Azure Portal, under Properties")
 
-        # get uai resource id from UAI_RESOURCE_ID or _AZUREML_SINGULARITY_JOB_UAI
-        UAI_RESOURCE_ID = os.environ.get("_AZUREML_SINGULARITY_JOB_UAI", None)
-        if UAI_RESOURCE_ID is None:
-            print("UAI_RESOURCE_ID not found in _AZUREML_SINGULARITY_JOB_UAI. Trying UAI_RESOURCE_ID")
-            UAI_RESOURCE_ID = os.environ.get("UAI_RESOURCE_ID", None)
-            print("UAI_RESOURCE_ID found in UAI_RESOURCE_ID")
-        if UAI_RESOURCE_ID is None:
-            raise ValueError("UAI_RESOURCE_ID or _AZUREML_SINGULARITY_JOB_UAI must be set in the environment variables. Add them to .env. This is found in the user assigned managed identity in Azure Portal, under Properties")
-        
-        save_to_azure_blob = True
-
-        try:
-            credentials = DefaultAzureCredential(logging_enable=True)
-            # identity_config={"resource_id": UAI_RESOURCE_ID}
-            # credentials = ManagedIdentityCredential(
-            #     logging_enable=True,
-            #     identity_config = identity_config
-            # )
-            storage_options = dict(credential=credentials)
-        except Exception as e:
-            raise RuntimeError("Failed to initialize Azure credentials. Ensure the environment variables are set correctly.") from e
-
- 
     if not ((args.fasta_path is not None) ^ (args.fastas_glob_pattern is not None)):
         raise ValueError("Either specify fasta_path and splits_path or fastas_glob_pattern. Not both.")
  
