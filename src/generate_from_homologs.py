@@ -32,7 +32,6 @@ def generate(args: argparse.Namespace) -> None:
     if "gap" in args.task:
         allowed_tokens += [UL_ALPHABET_PLUS.index(GAP)]
     else:
-        # eos_id = UL_ALPHABET_PLUS.index(STOP)
         eos_id = UL_ALPHABET_PLUS.index(SEP)
         allowed_tokens += [eos_id]
         model.generation_config.eos_token_id = eos_id
@@ -54,24 +53,12 @@ def generate(args: argparse.Namespace) -> None:
             else:
                 tokenize_me = START_UL
             tokenize_me += SEP.join(seqs[1:args.max_seqs_msa]) + SEP
-            # if "gap" in args.task:
-            #     pass
-            #     # tokenize_me += END_AL
-            # else:
-            #     tokenize_me += END_UL
-            #     tokenize_me += START
             start_no_m = tokenizer([tokenize_me], return_tensors="pt", return_token_type_ids=False)['input_ids'].to(device)
             tokenize_me += "M"
             start = tokenizer([tokenize_me], return_tensors="pt", return_token_type_ids=False)['input_ids'].to(device)
             success = False
             attempt = 0
             while not success:
-                # if attempt % 2 == 0:
-                #     st = start
-                #     ml = args.max_length
-                # else:
-                #     st = start_no_m
-                #     ml = args.max_length + 1
                 st = start_no_m
                 ml = args.max_length + 1
                 generated = model.generate(st, do_sample=True, logits_processor=[sup],
@@ -79,7 +66,6 @@ def generate(args: argparse.Namespace) -> None:
                                                   max_new_tokens=ml,
                                                   use_cache=True)
                 untokenized = tokenizer.batch_decode(generated, skip_special_tokens=False)
-                # new_seq = untokenized[0].split(START)[-1].split(STOP)[0]
                 if args.task == "gap":
                     new_seq = untokenized[0].split(SEP)[-1]
                 else:
