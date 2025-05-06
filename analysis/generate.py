@@ -25,7 +25,6 @@ print("device", DEVICE)
 
 
 def generate(args: argparse.Namespace) -> None:
-    #print(f"Starting job on rank {RANK} with local rank {LOCAL_RANK} and world size {WORLD_SIZE}")
     seed_everything(args.random_seed + RANK)
     dist.init_process_group(backend="nccl")
     
@@ -105,13 +104,8 @@ def generate(args: argparse.Namespace) -> None:
     out_dir = os.path.join(args.out_fpath, args.model_name + '_' + str(total_steps) + "_" + task + '_t%.1f' %args.temp)
     if RANK == 0:
         os.makedirs(out_dir, exist_ok=True)
-    # if args.task == "sequence":
-    #     # wipe the output file
-    #     with open(os.path.join(out_dir, 'rank%d.fasta' % RANK), "w") as f:
-    #         pass
     unwritten_generations = []
     unwritten_ns = []
-    #
     for s in tqdm(range(args.n_generations // args.batch_size)):
         generated = model.module.generate(start, do_sample=True, logits_processor=[sup],
                                                  temperature=args.temp, num_beams=1, max_new_tokens=max_len,

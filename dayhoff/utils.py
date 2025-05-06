@@ -13,10 +13,7 @@ import torch.nn as nn
 from evodiff.utils import Tokenizer
 from dayhoff.model import _get_hf_model, ARDiffusionModel
 from dayhoff.constants import UL_ALPHABET_PLUS
-# from torch.serialization import add_safe_globals
-# import numpy.core.multiarray
 
-# add_safe_globals({'scalar': numpy.core.multiarray.scalar})
 
 
 def cosine_anneal_with_warmup(n_warmup_steps, n_anneal_steps, final_ratio=0.0):
@@ -152,11 +149,11 @@ def load_checkpoint(
             )
         if os.path.exists(os.path.join(ckpt_path, "scheduler%d.pt" %rank)):
             sd = torch.load(
-                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu"), #weights_only=False
+                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu"),
             )
         elif os.path.exists(os.path.join(ckpt_path, "scheduler.pt")):
             sd = torch.load(
-                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu"), #weights_only=False
+                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu"),
             )
         else:
             return 0, 0, 0, 0, 0

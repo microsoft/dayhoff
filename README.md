@@ -9,7 +9,7 @@
 	* [Available models](#Available-models)
 	* [Available datasets](#Available-datasets)
 * [Unconditional generation](#Unconditional-generation)
-* [Homologue-conditioned generation](#Homologue-conditioned-generation)
+* [Homolog-conditioned generation](#Homolog-conditioned-generation)
 * [Analysis scripts](#Analysis-scripts)
 * [Contributing](#Contributing)
 * [Trademarks](#Trademarks)
@@ -90,8 +90,6 @@ The available models in Hugging Face are:
 * **170M-parameter models:** 170m-GGR, 170m-UR50, 170m-UR90, 170m-UR50-BBR-s, 170m-UR50-BBR-u, 170m-UR50-BBR-n
 * **3B-parameter models:** 3b-GGR-MSA, 3b-UR90, 3b-cooled
 
-The following table provides details about each model:
-![dayhoff models](assets/dayhoff_models.png)
 
 ### Available datasets
 All datasets in Hugging Face are available in three formats: FASTA, Arrow, and JSONL.
@@ -157,7 +155,7 @@ For the exact script used in the paper consider using the [analysis/generate.py]
 python analysis/generate.py checkpoints/jamba-170m-seqsam-36w/ generations jamba-170m-seqsam-36w --n_generations 5
 ```
 
-## Homologue-conditioned generation
+## Homolog-conditioned generation
 
 The [generate_from_homologs](https://github.com/microsoft/dayhoff/blob/main/src/generate_from_homologs.py) script performs sequence generation conditioned on evolutionarily-related homologous sequences modeled as multiple sequence alignments (MSAs)
 
