@@ -58,12 +58,14 @@ def organize_scaffold_outputs(input_dir, output_dir, pdb_dir):
                     # Handle standard generation format
                     if '.json_' in src_pdb:
                         dest_pdb = src_pdb.replace('.json', '')
-                        pdb_id, case, num = dest_pdb.split('_')
-                        dest_filename = "{:02}_{case}_{num}".format(int(pdb_id)+1, case=case, num=num)
-                    else:
-                        # Skip files that don't match expected patterns
-                        print(f"  Skipping {src_pdb}: unrecognized format")
-                        continue
+                    else: 
+                        dest_pdb = src_pdb
+                    pdb_id, case, num = dest_pdb.split('_')
+                    dest_filename = "{:02}_{case}_{num}".format(int(pdb_id)+1, case=case, num=num)
+                    
+                        # # Skip files that don't match expected patterns
+                        # print(f"  Skipping {src_pdb}: unrecognized format")
+                        # continue
                         
                     dest_path = os.path.join(output_case_path, dest_filename)
                     

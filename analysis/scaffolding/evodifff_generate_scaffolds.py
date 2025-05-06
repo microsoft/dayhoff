@@ -28,6 +28,7 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
     motif_files = os.listdir(args.motif_dir)
     for motif_file in motif_files:
         if motif_file not in PROBLEM_LIST: 
+            print(f"Skipping {motif_file}: not in problem list: {PROBLEM_LIST}")
             continue
         print(f"Running {motif_file}")
         
@@ -46,7 +47,7 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
         if os.path.exists(out_file) and not args.overwrite:
             print(f"Skipping {motif_file}: already exists. To overwrite use --overwrite")
             continue
-        if args.overwrite: 
+        if os.path.exists(out_file) and args.overwrite: 
             print(f"Deleting and overwriting {motif_file}")
             os.remove(out_file)
 
@@ -76,7 +77,8 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
 
                 # initiate masked sample
                 sample = torch.zeros((1, scaffold_length)) + tokenizer.mask_id
-                print("spec", spec)
+                if args.verbose: 
+                    print("spec", spec)
 
                 # get motif length
                 # get between segment lengths
@@ -92,18 +94,21 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
                         motif_length += sp
 
                 if not between_segment_lengths:  # single group problems should randomly be placed in scaffold
-                    print("no between seg lengths")
+                    if args.verbose:
+                        print("no between seg lengths")
                     start_id = np.random.choice(scaffold_length - motif_length)
                     end_id = start_id + motif_length
                     sample[:, start_id:end_id] = torch.tensor(tokenizer.tokenize([spec[0]]))
                     new_start_idxs = [start_id]
                     new_end_idxs = [end_id]
                 else:
-                    print("between seg lengths")
+                    if args.verbose:
+                        print("between seg lengths")
                     start_id = 0
                     remaining_length = scaffold_length - motif_length
                     if remaining_length <= 0: # if motif length longer than possible scaffold length randomly remove between segments 
-                        print("motif longer than possible scaffold len")
+                        if args.verbose:
+                            print("motif longer than possible scaffold len")
                         remove_number = -remaining_length
                         new_segment_lengths = between_segment_lengths[:]
                         n_removed = 0
@@ -114,13 +119,15 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
                                 n_removed += 1
                         motif_length -= n_removed
                     else: 
-                        print("motif shorter than possible scaffold len", remaining_length, scaffold_length, motif_length)
+                        if args.verbose:
+                            print("motif shorter than possible scaffold len", remaining_length, scaffold_length, motif_length)
                         if remaining_length == 0: 
                             start_id = 0 
                         else:
                             start_id = np.random.choice(np.arange(0, remaining_length))
                         new_segment_lengths = between_segment_lengths
-                    print("start id", start_id)
+                    if args.verbose:
+                        print("start id", start_id)
                     sample_motif = torch.zeros((scaffold_length)) + tokenizer.mask_id
                     motif_start_id = start_id
                     
@@ -142,7 +149,8 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
                     #sample[:, start_id:start_id + len(sample_motif)] = sample_motif
                     sample = sample_motif.unsqueeze(0)
                 value, loc = (sample == tokenizer.mask_id).long().nonzero(as_tuple=True)  # locations that need to be unmasked
-                print("Starting", [tokenizer.untokenize(s) for s in sample])
+                if args.verbose:
+                    print("Starting", [tokenizer.untokenize(s) for s in sample])
                 shuffle_idx = torch.randperm(loc.nelement())
                 loc = loc.view(-1)[shuffle_idx].view(loc.size())
                 sample = sample.long().to(DEVICE)
@@ -156,7 +164,8 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
                         p = torch.nn.functional.softmax(p, dim=1)  # softmax over categorical probs
                         p_sample = torch.multinomial(p, num_samples=1)
                         sample[:, i] = p_sample.squeeze()
-                print("Generated sequence:", [tokenizer.untokenize(s) for s in sample])
+                if args.verbose:
+                    print("Generated sequence:", [tokenizer.untokenize(s) for s in sample])
                 untokenized = [tokenizer.untokenize(s) for s in sample]
 
                 with open(out_file, "a") as f:
@@ -177,15 +186,10 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
                         contig += str(new_segment_lengths[idx]) + '/'
                         idx += 1
                 contig += str(scaffold_length - new_end_idxs[-1])
-                print("contig", contig)
+                if args.verbose:
+                    print("contig", contig)
                 contigs.append(contig)
                 sample_nums.append(s)
-
-
-
-        # save_df = pd.DataFrame(list(zip(strings, start_idxs, end_idxs, scaffold_lengths)),
-        #                    columns=['seqs', 'start_idxs', 'end_idxs', 'scaffold_lengths'])
-        # save_df.to_csv(os.path.join(args.out_fpath, "evodiff_" + motif_file.replace(".json", ".csv")), index=True)
 
         save_df = pd.DataFrame(list(zip(sample_nums, contigs)), 
                                columns=['sample_num', 'motif_placements'])
@@ -202,6 +206,7 @@ def main():
     #parser.add_argument("--out-fpath", type=str, default='scaffolding/motifbench/results/evodiff/')  # location to write to
     parser.add_argument("--problem-set", type=str, default='motifbench')  # `motifbench`, `rfdiff`, or manually input a problem to rerun e.g. `27_5YUI`
     parser.add_argument("--overwrite", action='store_true') # overwrite outputs 
+    parser.add_argument("--verbose", action='store_true') # verbose
     
     args = parser.parse_args()
 
