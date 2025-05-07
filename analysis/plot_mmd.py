@@ -179,18 +179,6 @@ def main(args):
     plt.tight_layout()
     plt.savefig(os.path.join(args.out_dir, FNAME_MEDIAN_HEURISTIC_PDF), bbox_inches='tight', dpi=300)
     plt.show()
-    print(
-
-        """
-        Estimated median pairwise distances in aggregate samples over 10,000 Monte Carlo trials (sample size = 1,000).
-        The median heuristic is used to estimate the bandwidth parameter (σ) of the RBF kernel for Maximum Mean Discrepancy (MMD).
-        Shown are the convergence trajectories of the median distance estimate across four generation methods (DR, BBR-n, BBR-s, BBR-u), applied to two different training datasets: GGR and UR50.
-        Shaded regions indicate 95% confidence interval. 
-        """
-    )
-
-
-
 
     ## Plot Final MMD Results Bar Charts ##
 
