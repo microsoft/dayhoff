@@ -1,7 +1,6 @@
 import os.path as osp
 import os
 is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
-
 import argparse
 import pyfastx
 import json

@@ -15,8 +15,6 @@ from typing import Literal
 from multiprocessing import cpu_count
 import ijson
 from dotenv import load_dotenv
-from azure.identity import ManagedIdentityCredential, DefaultAzureCredential
-
  
 def json_generator(json_path, key):
     with open(json_path,'r') as f: 
