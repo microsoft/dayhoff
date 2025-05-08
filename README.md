@@ -172,25 +172,26 @@ The following list briefly describes the functionality of the most important scr
 * [compile_cas9_fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_cas9_fidelity.py): 
 * [compile_dayhoffref.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_dayhoffref.py): 
 * [compile_msa_fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_msa_fidelity.py): 
-* [create-fasta-sample.py](https://github.com/microsoft/dayhoff/blob/main/analysis/create-fasta-sample.py): 
+* [create-fasta-sample.py](https://github.com/microsoft/dayhoff/blob/main/analysis/create-fasta-sample.py): generates a sample from a fasta file.
 * [embed.py](https://github.com/microsoft/dayhoff/blob/main/analysis/embed.py): 
 * [evodiff_msa.py](https://github.com/microsoft/dayhoff/blob/main/analysis/evodiff_msa.py): 
 * [extract_test_fastas.py](https://github.com/microsoft/dayhoff/blob/main/analysis/extract_test_fastas.py): 
-* [fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/fidelity.py): 
+* [fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/fidelity.py): assesses generations' structural fidelity by predicting structure pLDDT and  self-consistency perplexity (via folding and inverse folding).
 * [fpd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/fpd.py): 
 * [generate_cas9.py](https://github.com/microsoft/dayhoff/blob/main/analysis/generate_cas9.py): 
 * [gigaref.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref.py): 
 * [gigaref_clusters.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_clusters.py): 
 * [gigaref_singles.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_singles.py): 
 * [gigaref_to_jsonl.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_to_jsonl.py): 
-* [mmd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/mmd.py): 
+* [mmd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/mmd.py): computes the Maximum Mean Discrepancy between generations and datasets using Monte Carlo sampling.
+* [plot_mmd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_mmd.py): plots the final Maximum Mean Discrepancy estimates and their values across all Monte Carlo trials.
 * [pfam.py](https://github.com/microsoft/dayhoff/blob/main/analysis/pfam.py): 
 * [pick_test_msas.py](https://github.com/microsoft/dayhoff/blob/main/analysis/pick_test_msas.py): 
 * [plot_metrics.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_metrics.py): 
 * [plot_valid.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_valid.py): 
 * [plot_zs.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_zs.py): 
 * [protmamba.py](https://github.com/microsoft/dayhoff/blob/main/analysis/protmamba.py): 
-* [query_from_homologs.py](https://github.com/microsoft/dayhoff/blob/main/analysis/query_from_homologs.py): 
+* [query_from_homologs.py](https://github.com/microsoft/dayhoff/blob/main/analysis/query_from_homologs.py): full-functionality script that performs sequence generation conditioned on evolutionarily-related homologous sequences modeled as multiple sequence alignments (MSAs). Does not use Hugging Face.
 * [sample-clustered-splits.py](https://github.com/microsoft/dayhoff/blob/main/analysis/sample-clustered-splits.py): 
 * [sample_uniref.py](https://github.com/microsoft/dayhoff/blob/main/analysis/sample_uniref.py): 
 * [taxonomy.py](https://github.com/microsoft/dayhoff/blob/main/analysis/taxonomy.py): 
