@@ -38,7 +38,7 @@ tqdm~=4.67.1
 #Huggingface Hub
 ijson~=3.3.0
 pyfastx~=2.2.0
-huggingface_hub~=0.27.1
+huggingface_hub>=0.27.1,<0.33.0
 
 #Azure
 azure-identity~=1.21.0
