@@ -190,6 +190,14 @@ def run_esmfold(input_fasta: str,
         seqs, seq_names = parse_fasta(input_fasta, return_names=True)
     seq_ids = [seq_name.split()[0] for seq_name in seq_names] # In case record contains annotations, just keep sequence ID.
 
+    # Filter out None values from both lists
+    # filtered_pairs = [(seq, id) for seq, id in zip(seqs, seq_ids) if seq is not None and id is not None]
+    # if len(filtered_pairs) < len(seqs):
+    #     print(f"Filtered out {len(seqs) - len(filtered_pairs)} None values from sequences")
+    
+    # Unpack the filtered pairs back into separate lists
+    #seqs, seq_ids = zip(*filtered_pairs) if filtered_pairs else ([], [])
+    
     seqs, seq_ids = zip(*sorted(zip(seqs, seq_ids), key=lambda x: len(x[0])))
     #print(seqs)
 
@@ -203,6 +211,9 @@ def run_esmfold(input_fasta: str,
         select_array = [len(s) >= 800 for s in seqs]
         filtered_seqs = [s for i, s in enumerate(seqs) if select_array[i]]
         filtered_seq_ids = [s for i, s in enumerate(seq_ids) if select_array[i]]
+    elif short_or_long == "crop": 
+        filtered_seqs = [s[:1750] for s in seqs]
+        filtered_seq_ids = seq_ids
     else: # dont filter if anything else
         filtered_seqs = seqs
         filtered_seq_ids = seq_ids
@@ -226,15 +237,17 @@ def run_esmfold(input_fasta: str,
 
     # Could do batching, though I got inconsistent results and this seems fast while saving memory.
     for seq_id, seq in zip(filtered_seq_ids,filtered_seqs):
-        if not os.path.exists(os.path.join(output_dir, f"{seq_id}.pdb")):
-            inputs = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids'].cuda()
-            with torch.no_grad():
-                outputs = model(inputs,num_recycles=num_recycles)
+        print(seq_id, seq, len(seq))
+        if seq is not None:
+            if not os.path.exists(os.path.join(output_dir, f"{seq_id}.pdb")):
+                inputs = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids'].cuda()
+                with torch.no_grad():
+                    outputs = model(inputs,num_recycles=num_recycles)
 
-            pdb = convert_outputs_to_pdb(outputs)
+                pdb = convert_outputs_to_pdb(outputs)
 
-            with open(os.path.join(output_dir,f"{seq_id}.pdb"), "w") as f:
-                f.write("".join(pdb))
+                with open(os.path.join(output_dir,f"{seq_id}.pdb"), "w") as f:
+                    f.write("".join(pdb))
 
 
 def run_inversefold(input_folder, output_folder, pdb_files, chain_id="A", temperature=1, num_samples=1, method="mpnn"):

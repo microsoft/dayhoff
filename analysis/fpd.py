@@ -53,8 +53,8 @@ def plot_embedding(train_emb, run_emb, colors, save_name, skip=10):
     plt.scatter(run_emb[:, 0], run_emb[:, 1], s=20, alpha=0.95,
                 c=colors[1], edgecolors='k')
     ax.axis('off')
-    fig.savefig(os.path.join('plots/fid_' + save_name + '.svg'))
-    fig.savefig(os.path.join('plots/fid_' + save_name + '.png'))
+    fig.savefig(os.path.join(save_name + '.svg')) #'plots/fid_' + 
+    fig.savefig(os.path.join(save_name + '.png')) #'plots/fid_' + 
 
 
 def fit_umap(sequences, test_len, gen_len, colors, save_file, embedder=ProtTransBertBFDEmbedder()):
@@ -88,9 +88,10 @@ def main():
     parser.add_argument("--input_fasta", type=str)  # location of generated sequences
     parser.add_argument("--save_file", type=str, default='model_name')
     parser.add_argument("--plot_color", type=str, default='blue')
+    parser.add_argument("--test-fasta", type=str, default='/data/datasets/protein_test_sets/uniref50_202401_test_10k.fasta',)
     args = parser.parse_args()
 
-    test_fasta = '/home/salamdari/Desktop/evodiff2/generations/test-old/seqs.txt' # TODO update to new test sequences
+    test_fasta = args.test_fasta
     test_sequences = parse_txt(test_fasta)
     test_len = len(test_sequences)
     sequences = test_sequences

@@ -1,17 +1,14 @@
 import argparse
-import difflib
 import json
 import os
-import pathlib
 
-from ast import literal_eval
 import MDAnalysis as mda
 from MDAnalysis.analysis import rms
 import numpy as np
 import pandas as pd
 import tqdm as tqdm
 
-from Bio.PDB import PDBParser, Selection
+from Bio.PDB import PDBParser
 
 
 POSSIBLE_SEGMENTS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -28,7 +25,6 @@ def get_bfactor(filename, chain="A"):
                     b_factors.append(atom.get_bfactor())
     b_factors = np.array(b_factors)
     return b_factors.mean()
-
 
 def parse_contig_string(contig_string):
     contig_segments = []
@@ -117,7 +113,8 @@ def main():
 
 
     args = parser.parse_args()
-
+    
+    # Paths should all be the same if using workflow 
     args.path_to_generated_pdbs = os.path.join(args.path_to_generated, f'{args.problem_set}/{args.model_name}')
     args.path_to_downloaded_pdbs = os.path.join(args.path_to_extract_motif, f'{args.problem_set}/pdb/')
     args.path_to_motif = os.path.join(args.path_to_extract_motif, f'{args.problem_set}/motif/')
