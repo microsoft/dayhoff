@@ -72,7 +72,7 @@ dependencies = [ #TODO: can add optional dependencies
 #Huggingface Hub
 'ijson~=3.3.0',
 'pyfastx~=2.2.0',
-'huggingface_hub~=0.27.1',
+'huggingface_hub>=0.27.1,<0.34.0',
 
 #Azure
 'azure-identity~=1.21.0'
