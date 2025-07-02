@@ -70,9 +70,9 @@ for i, db in enumerate(columns):
         db = "SMAG"
     elif db == "metaeuk":
         db = "MetaEuk"
-    count_df.loc[len(count_df), ["database", "count", "fraction", "ggr"]] = (db, singleton_sums[i], singleton_sums[i] / singleton_sums[-1], "singletons")
+    count_df.loc[len(count_df), ["database", "count", "fraction", "ggr"]] = (db, singleton_sums[i], singleton_sums[i] / singleton_sums[-1], "GigaRef-singletons")
     count_df.loc[len(count_df), ["database", "count", "fraction", "ggr"]] = (db, database_sizes[i] - singleton_sums[i],
-                                                                             (database_sizes[i] - singleton_sums[i]) / (database_sizes[-1] - singleton_sums[-1]), "clusters")
+                                                                             (database_sizes[i] - singleton_sums[i]) / (database_sizes[-1] - singleton_sums[-1]), "GigaRef-clusters")
 big_cluster_compositions = cluster_compositions[ns_ids]
 ur100id = list(columns).index("UniRef100")
 big_cluster_count = len(big_cluster_compositions)
@@ -145,13 +145,14 @@ fig, ax = plt.subplots(1, 1)
 _ = sns.barplot(data=count_df[count_df['database'] != "total"], x="database", y="count", hue="ggr",
                 ax=ax, palette=[pal[4], pal[6]],
                 order=['SRC', 'MGY', 'MERC', 'UniRef100', 'SMAG', 'TOPAZ', 'MetaEuk',
-                       'MGV', 'GPD'], legend=True, hue_order=['clusters', 'singletons'])
+                       'MGV', 'GPD'], legend=True, hue_order=['GigaRef-clusters', 'GigaRef-singletons'])
 # _ = sns.barplot(data=count_df[count_df['database'] != "total"], x="database", y="fraction", hue="ggr",
 #                 ax=axs[1], palette=[pal[4], sns.color_palette("pastel")[4]],
 #                 order=['SRC', 'MGY', 'MERC', 'UniRef100', 'smag', 'TOPAZ', 'metaeuk',
 #                        'MGV', 'GPD'], hue_order=['clusters', 'singletons'])
 _ = ax.semilogy()
 _ = ax.set_xlabel("")
+_ = ax.set_ylabel("Count")
 _ = ax.set_xticks(ax.get_xticks())
 _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 # _ = ax.tick_params(axis="x", labelrotation=45, horizontalalignment="right")

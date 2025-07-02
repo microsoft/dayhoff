@@ -207,8 +207,8 @@ direction = "forward"
 df = pd.DataFrame()
 current_row = 0
 current_msa_id = 0
-for task in ["indel"]:
-    for rank in [2, 3, 4, 5, 6, 7]:
+for task in ["gap", "indel"]:
+    for rank in range(8):
     # for rank in range(7):
         out_file = os.path.join(out_fpath, "valid_long_" + model + '_' + str(
             checkpoint) + "_" + task + "_" + direction + "_%d.pt" % rank)
@@ -288,6 +288,8 @@ current_id = 0
 tasks = ['indel', 'gap']
 for task in tasks:
     for rank in range(world_size):
+        if task == "gap" and rank == 7:
+            continue
         df = pd.read_csv(os.path.join(out_fpath, "valid_by_conditioning_%s_%d.csv" %(task, rank)))
         df['msa_id'] = current_id + df['msa_id']
         current_id = max(df['msa_id'])

@@ -102,17 +102,48 @@ df = df[df['file'].isin(kept_files)]
 len(set(df['file']))
 df.to_csv(os.path.join(base_path, "compiled_fidelities.csv"), index=False)
 df = pd.read_csv(os.path.join(base_path, "compiled_fidelities.csv"))
-
-
-
 models_to_plot = {
     "natural": "Natural",
     "ccmgen": "CCMgen",
     "evodiff_nom": "EvoDiff-MSA",
     "xlstm": 'Prot-xLSTM',
-        "gap_1.0_0.05_nom": "Alignment conditioning",
-        "indel_1.0_0.05_nom": "Homolog conditioning"
+        "gap_1.0_0.05_nom": "Aligned",
+        "indel_1.0_0.05_nom": "Unaligned"
 }
+
+model1 = "indel_1.0_0.05_nom"
+model2 = "gap_1.0_0.05_nom"
+df.columns
+all_names = list(set(df['file']))
+metrics = {
+    "plddt": [],
+    "perplexity": [],
+    "tmscore": [],
+    "seq_id": []
+}
+m_dict = {
+    "plddt": "pLDDT",
+    "perplexity": "scPerplexity",
+    "tmscore": "TM score",
+    "seq_id": "Sequence identity"
+}
+for n in all_names:
+    for m in metrics:
+        first = df[(df['model'] == model1) & (df['file'] == n)][m].values[0]
+        second = df[(df['model'] == model2) & (df['file'] == n)][m].values[0]
+        metrics[m].append(first - second)
+fig, axs = plt.subplots(1, 4, figsize=(14.4, 4.8))
+for i, (m, ax) in enumerate(zip(metrics, axs)):
+    print(np.array(metrics[m]).mean())
+    _ = sns.stripplot(y=metrics[m], ax=ax, alpha=0.7)
+    if i == 0:
+        _ = ax.set_ylabel(models_to_plot[model1] + " - " + models_to_plot[model2])
+    _ = ax.set_xlabel(m_dict[m])
+    _ = ax.axhline(y=0, color='gray')
+    _ = ax.set_xticks(ax.get_xticks())
+    _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+_ = fig.savefig(os.path.join(base_path, "ulal_diff.pdf"), dpi=300, bbox_inches="tight")
+
 
 grouped = df[['model', 'plddt', 'perplexity', 'tmscore', 'seq_id']].groupby('model')
 final_models = ["gap_1.0_0.05_nom", "indel_1.0_0.05_nom", "ccmgen", "xlstm", "evodiff_nom", "natural"]
@@ -128,11 +159,10 @@ grouped.tmscore.agg(['mean', 'std'])
 grouped.plddt.agg(['mean', 'std'])
 grouped.perplexity.agg(['mean', 'std'])
 
-
 pal = sns.color_palette()
 model_to_hue = {
     "natural": "gray",
-    "ccmgen_short": pal[-4],
+    "ccmgen": pal[-4],
     "xlstm": pal[-1],
     "evodiff_nom": pal[-2],
     "gap_1.0_0.05_nom": pal[1],
@@ -197,9 +227,17 @@ df[df['file'] == '100335950'][['plddt', 'model', 'seq_id', 'gen_length', 'query_
 df.head()
 df.columns
 pivoted = {}
-for m in ['plddt', 'perplexity', 'tmscore', 'seq_id']:
-    df2 = df.pivot(index='file', columns='model', values=m)
-    for i, model1 in enumerate(final_models):
-        for model2 in final_models[i + 1:]:
+out_models = {
+"gap_1.0_0.05_nom": "aligned", "indel_1.0_0.05_nom": "unaligned", "ccmgen": "CCMgen", "xlstm": "prot-xLSTM", "evodiff_nom": "EvoDiff-MSA", "natural": "natural"
+}
+ttest_outfile = os.path.join(base_path, "ttest_results.csv")
+with open(ttest_outfile, 'w') as f:
+    f.write("metric,model1,model2,t,p\n")
+    for m in ['plddt', 'perplexity', 'tmscore', 'seq_id']:
+        df2 = df.pivot(index='file', columns='model', values=m)
+        for i, model1 in enumerate(final_models):
+            for model2 in final_models[i + 1:]:
+                r = ttest_rel(df2[model1], df2[model2])
+                f.write(','.join([m, out_models[model1], out_models[model2], str(r.statistic), str(r.pvalue)]) + "\n")
             if ttest_rel(df2[model1], df2[model2]).pvalue > 0.05:
                 print(m, model1, model2)
