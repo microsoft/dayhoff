@@ -170,7 +170,7 @@ model_to_hue = {
 }
 cdfs = {
     "seq_id": (plt.subplots(), "Sequence Identity"),
-    "tmscore": (plt.subplots(), "TM score"),
+    "tmscore": (plt.subplots(), "TM-score"),
     "plddt": (plt.subplots(), "pLDDT"),
     "perplexity": (plt.subplots(), "scPerplexity"),
 }
