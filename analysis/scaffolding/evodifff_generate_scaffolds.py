@@ -1,30 +1,21 @@
-from pathlib import Path
-
-from matplotlib.pyplot import sca
-from evodiff.pretrained import OA_DM_640M
 import argparse
-import datetime
 import json
 import os
 import random
-from typing import Optional, Tuple
-from tqdm import tqdm
-import pandas as pd
 
 import numpy as np
+import pandas as pd
 import torch
+from tqdm import tqdm
 
-from sequence_models.constants import START, STOP
-
-# TODO move to evodiff 
+from evodiff.pretrained import OA_DM_640M
 
 POSSIBLE_SEGMENTS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 RF_PROBLEMS = ['00_1PRW', '01_1BCF', '02_5TPN', '03_5IUS', '04_3IXT', '05_5YUI', '06_1QJG', '07_1YCR', '08_2KL8', '09_7MRX', '10_7MRX', '11_7MRX', '12_4JHW', '13_4ZYP', '14_5WN9', '15_6VW1', '16_5TRV', '17_5TRV', '18_5TRV', '19_6E6R', '20_6E6R', '21_6E6R', '22_6EXZ', '23_6EXZ', '24_6EXZ']
-
 MOTIFBENCH_PROBLEMS = ['00_1LDB', '01_1ITU', '02_2CGA', '03_5WN9', '04_5ZE9', '05_6E6R', '06_6E6R', '07_7AD5', '08_7CG5', '09_7WRK', '10_3TQB', '11_4JHW', '12_4JHW', '13_5IUS', '14_7A8S', '15_7BNY', '16_7DGW', '17_7MQQ', '18_7MQQ', '19_7UWL', '20_1B73', '21_1BCF', '22_1MPY', '23_1QY3', '24_2RKX', '25_3B5V', '26_4XOJ', '27_5YUI', '28_6CPA', '29_7UWL']
 
-def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST)  -> None:
 
+def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST)  -> None:
     motif_files = os.listdir(args.motif_dir)
     for motif_file in motif_files:
         if motif_file not in PROBLEM_LIST: 
@@ -74,12 +65,10 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
             for s in tqdm(range(args.num_generations)):
                 if length_range: 
                     scaffold_length = random.randint(int(r1), int(r2)) # randomly sample per seq if length range
-
                 # initiate masked sample
                 sample = torch.zeros((1, scaffold_length)) + tokenizer.mask_id
                 if args.verbose: 
                     print("spec", spec)
-
                 # get motif length
                 # get between segment lengths
                 motif_length = 0
@@ -92,7 +81,6 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
                     else:
                         between_segment_lengths.append(sp)
                         motif_length += sp
-
                 if not between_segment_lengths:  # single group problems should randomly be placed in scaffold
                     if args.verbose:
                         print("no between seg lengths")
@@ -144,9 +132,6 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
                             sp_index = between_segment_lengths.index(sp)  # find where in list old length is
                             motif_start_id += new_segment_lengths[sp_index]  # account for new or same length
                     print("start/ed", new_start_idxs, new_end_idxs)
-                    # start_id = np.random.choice(scaffold_length - len(sample_motif)) if len(
-                    #     sample_motif) != scaffold_length else 0
-                    #sample[:, start_id:start_id + len(sample_motif)] = sample_motif
                     sample = sample_motif.unsqueeze(0)
                 value, loc = (sample == tokenizer.mask_id).long().nonzero(as_tuple=True)  # locations that need to be unmasked
                 if args.verbose:
@@ -199,17 +184,12 @@ def generate(args: argparse.Namespace, tokenizer, model , DEVICE, PROBLEM_LIST) 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=str, default = 'scaffolding/', help="Output folder")
-    # parser.add_argument("--motif-dir", type=str, default = 'scaffolding/motifbench/motif', 
-    #                     help = "output folder from extract_motif_sequences.py")  # location of scaffolding folder
     parser.add_argument("--gpu-id", type=int, default=0)
     parser.add_argument("--num-generations", type=int, default=100)
-    #parser.add_argument("--out-fpath", type=str, default='scaffolding/motifbench/results/evodiff/')  # location to write to
     parser.add_argument("--problem-set", type=str, default='motifbench')  # `motifbench`, `rfdiff`, or manually input a problem to rerun e.g. `27_5YUI`
     parser.add_argument("--overwrite", action='store_true') # overwrite outputs 
     parser.add_argument("--verbose", action='store_true') # verbose
-    
     args = parser.parse_args()
-
     args.motif_dir = os.path.join(args.output_dir, args.problem_set, 'motif')
     args.out_fpath = os.path.join(args.output_dir, args.problem_set, 'results', 'evodiff')
 

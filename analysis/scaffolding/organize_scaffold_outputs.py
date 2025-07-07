@@ -1,9 +1,6 @@
 import argparse
 import os
-import csv
-import re
 import shutil
-import glob
 
 # Define problem sets
 RF_PROBLEMS = ['00_1PRW', '01_1BCF', '02_5TPN', '03_5IUS', '04_3IXT', '05_5YUI', '06_1QJG', '07_1YCR', '08_2KL8', '09_7MRX', '10_7MRX', '11_7MRX', '12_4JHW', '13_4ZYP', '14_5WN9', '15_6VW1', '16_5TRV', '17_5TRV', '18_5TRV', '19_6E6R', '20_6E6R', '21_6E6R', '22_6EXZ', '23_6EXZ', '24_6EXZ']
@@ -11,7 +8,7 @@ RF_PROBLEMS = ['00_1PRW', '01_1BCF', '02_5TPN', '03_5IUS', '04_3IXT', '05_5YUI',
 MOTIFBENCH_PROBLEMS = ['00_1LDB', '01_1ITU', '02_2CGA', '03_5WN9', '04_5ZE9', '05_6E6R', '06_6E6R', '07_7AD5', '08_7CG5', '09_7WRK', '10_3TQB', '11_4JHW', '12_4JHW', '13_5IUS', '14_7A8S', '15_7BNY', '16_7DGW', '17_7MQQ', '18_7MQQ', '19_7UWL', '20_1B73', '21_1BCF', '22_1MPY', '23_1QY3', '24_2RKX', '25_3B5V', '26_4XOJ', '27_5YUI', '28_6CPA', '29_7UWL']
 
 
-def organize_scaffold_outputs(input_dir, output_dir, pdb_dir):
+def organize_scaffold_outputs(input_dir, output_dir, pdb_dir, offset_index=False):
     """
     Organize scaffold outputs into the required directory structure and metadata format.
 
@@ -39,7 +36,7 @@ def organize_scaffold_outputs(input_dir, output_dir, pdb_dir):
             if case_dir in problem_set: 
                 # Create the output directory for this case
                 new_num, case_dir_postfix = case_dir.split('_')
-                if args.offset_index:
+                if offset_index:
                     new_num = int(new_num) + 1
                 else: 
                     new_num = int(new_num)
@@ -81,4 +78,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    organize_scaffold_outputs(args.input_dir, args.output_dir, args.pdb_dir)
+    organize_scaffold_outputs(args.input_dir, args.output_dir, args.pdb_dir, args.offset_index)

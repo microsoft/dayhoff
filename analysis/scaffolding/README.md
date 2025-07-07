@@ -1,6 +1,5 @@
-# Scaffold Generation Protocol with EvoDiff
-
-This document outlines the protocol for generating protein scaffolds with EvoDiff, including the specific scripts used for this purpose in the codebase.
+# Scaffold Generation Protocol
+This document outlines the protocol for generating protein scaffolds with Dayhoff and EvoDiff
 
 ## Overview
 
@@ -28,9 +27,9 @@ Where:
 - The list contains motif sequences (as strings) and spacing between motifs (as integers)
 - "scaffold_length" defines the target length (or range) of the final scaffold
 
-### 2. Generate Scaffolds with EvoDiff
+### 2. Generate Scaffolds
 
-The main script used for scaffold generation is `evodifff_generate_scaffolds.py`, which:
+Use `evodifff_generate_scaffolds.py`, which:
 1. Loads motif specifications from JSON files
 2. Generates scaffolds using the EvoDiff diffusion model
 3. Saves generated sequences and related information
@@ -53,22 +52,8 @@ Key parameters:
 - `--overwrite`: Optional flag to overwrite existing outputs
 - `--verbose`: Optional flag for detailed logging
 
-### 3. Generation Process
 
-For each motif specification, the script:
-1. Creates a masked sequence template of the target length
-2. Places motif sequences at appropriate positions
-3. Applies EvoDiff's diffusion model to generate sequences for the masked regions
-4. Saves generated sequences in FASTA format
-5. Records metadata about motif placements
-
-The core generation logic involves:
-- Creating a masked sequence template
-- Inserting motif sequences at specified or random positions
-- Using the EvoDiff model to predict amino acids for masked positions
-- Iteratively generating amino acids until all positions are filled
-
-### 4. Output Files
+### 3. Output Files
 
 The script produces:
 - FASTA files with generated scaffold sequences

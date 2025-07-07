@@ -1,17 +1,16 @@
 import argparse
-import os
 import json
-import pandas as pd
-import biotite.structure
-from biotite.structure.io import pdbx, pdb
-from biotite.structure.residues import get_residues
-from biotite.structure import filter_peptide_backbone
-from biotite.structure import get_chains
-from biotite.sequence import ProteinSequence
-import torch
-import urllib
+import os
 import shutil
+import urllib
+
+import biotite.structure
 import numpy as np
+import pandas as pd
+from biotite.sequence import ProteinSequence
+from biotite.structure import filter_peptide_backbone, get_chains
+from biotite.structure.io import pdb, pdbx
+from biotite.structure.residues import get_residues
 
 
 def download_pdb(PDB_ID, outfile, motif_bench_location: str = "MotifBench/"):
@@ -24,7 +23,7 @@ def download_pdb(PDB_ID, outfile, motif_bench_location: str = "MotifBench/"):
             src = os.path.join(motif_bench_location, "assets/1QY3_A96R.pdb")
             shutil.copy(src, outfile)
         else:
-            url = 'https://files.rcsb.org/download/' + str(PDB_ID) + '.pdb'
+            url = 'https://files.rcsb.org/download/' + str(PDB_ID) + '.pdb' 
             print("DOWNLOADING PDB FILE FROM", url)
             urllib.request.urlretrieve(url, outfile)
 
@@ -74,17 +73,10 @@ def extract_coords_from_structure(structure: biotite.structure.AtomArray):
             - coords is an L x 3 x 3 array for N, CA, C coordinates
             - seq is the extracted sequence
     """
-    #structure = remove_alt_conformations(structure)
     res_id, residues = get_residues(structure)
-    #print('M3L' in residues)
     CANNONICAL = ["ALA", "CYS", "ASP", "GLU", "PHE", "GLY", "HIS", "ILE",
                  "LYS", "LEU", "MET", "ASN", "PRO", "GLN", "ARG", "SER", "THR",
                  "VAL", "TRP","TYR","ASX","GLX","UNK"," * "]
-    #import pdb; pdb.set_trace()
-    # if res_id[0] < 0:
-    #     start = res_id[0]
-    # else:
-    #     start = 0
     seq = ''
     for i in range(res_id[-1]+1):
         if i in res_id:
@@ -96,8 +88,8 @@ def extract_coords_from_structure(structure: biotite.structure.AtomArray):
                 seq += ProteinSequence.convert_letter_3to1(residues[curr_index].item())
             else:
                 seq += 'X'
-        else: seq += 'X' # placeholders for correct indexing
-    #seq = ''.join([ProteinSequence.convert_letter_3to1(r) for r in residue_identities])
+        else: 
+            seq += 'X' # placeholders for correct indexing
     return seq
 
 def extract_coords_from_complex(structure):
@@ -112,7 +104,6 @@ def extract_coords_from_complex(structure):
     """
     seqs = {}
     all_chains = biotite.structure.get_chains(structure)
-    #print(all_chains)
     for chain_id in all_chains:
         chain = structure[structure.chain_id == chain_id]
         seqs[chain_id] = extract_coords_from_structure(chain)
@@ -149,7 +140,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test-cases", type=str, default='MotifBench/test_cases.csv')
     parser.add_argument("--output", type=str, default='motifbench_scaffolds')
-    parser.add_argument("--motifbench-path", type=str, default='MotifBench/') # Needed for local PDB download for a specific case 
+    parser.add_argument("--motifbench-path", type=str, default='MotifBench/') # Needed for local PDB download for a specific problem 
     parser.add_argument("--verbose", action="store_true") # Good for sanity checking 
     args = parser.parse_args()
 

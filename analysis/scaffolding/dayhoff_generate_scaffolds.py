@@ -1,29 +1,19 @@
 import argparse
-import datetime
 import json
 import os
 import random
-from typing import Optional, Tuple
-from tqdm import tqdm
-import re
-
 
 import numpy as np
 import pandas as pd
-from transformers import SuppressTokensLogitsProcessor
-import torch.nn.functional as F
 import torch
+from sequence_models.constants import CAN_AAS, SEP, START, STOP
+from tqdm import tqdm
+from transformers import SuppressTokensLogitsProcessor
 
-from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
-from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
-from dayhoff.utils import (load_msa_config_and_model,
-                           load_checkpoint, seed_everything)
+from dayhoff.constants import START_UL, UL_ALPHABET_PLUS
+from dayhoff.utils import load_checkpoint, load_msa_config_and_model, seed_everything
 
-
-#gpu_id = 0
 RANK = 0
-#DEVICE = torch.device('cuda:' + str(gpu_id))
-
 POSSIBLE_SEGMENTS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 def generate(args: argparse.Namespace) -> None:
@@ -73,11 +63,8 @@ def generate(args: argparse.Namespace) -> None:
         out_path = os.path.join(save_pdb, motif_file.replace(".json", ""))
         if not os.path.exists(out_path):
             os.makedirs(out_path, exist_ok=True)
-
-        #print(motif_file)
         if not motif_file.endswith(".json"):
             continue
-        #out_name = args.model_name + "_%d_t%.1f_" %(args.checkpoint_step, args.temp )
         out_name = motif_file.replace(".json", ".fasta")
         out_file = os.path.join(save_fasta, out_name)
         if os.path.exists(out_file) and not args.overwrite:
@@ -91,7 +78,9 @@ def generate(args: argparse.Namespace) -> None:
         chain = list(motif.keys())[0]
         spec = motif[chain]
         scaffold_length = motif["scaffold_length"]
-        if '-' in str(scaffold_length):
+        
+        # Pick a scaffold length 
+        if '-' in str(scaffold_length): 
             r1, r2 = scaffold_length.split('-')
             length_range = True
         else:
@@ -190,17 +179,14 @@ def main():
     parser.add_argument("in_fpath", type=str)  # location of checkpoint
     parser.add_argument("motif_dir", type=str)
     parser.add_argument("out_fpath", type=str)  # location to write to
-    parser.add_argument("model_name", type=str)
     parser.add_argument("--no_fa2", action="store_true")
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--checkpoint_step", type=int, default=-1)
     parser.add_argument("--n_generations", type=int, default=100)
-    parser.add_argument("--task", type=str, default="sequence")  # 'sequence' or 'msa'
     parser.add_argument("--temp", type=float, default=1.0)  #
     parser.add_argument("--random_seed", type=int, default=32)  #
     parser.add_argument("--ss", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
-    parser.add_argument("--restart", action="store_true")
     parser.add_argument("--gpu-id", type=int, default=0)
     parser.add_argument("--subset", type=str, nargs='+', help="List of specific motif files to process instead of all files in the directory")
 

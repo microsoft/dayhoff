@@ -10,8 +10,8 @@ import tqdm as tqdm
 
 def mmseqs_seq_based_clustering(input_path, scaffold_dir, problem_set, model, idx, pdb_name):
     """
-    Run mmseqs2 easy-cluster with cascaded clustering for sequence inputs 
-    TODO: remove? not using in current evals  
+    Run mmseqs2 easy-cluster to cluster sequences
+    TODO: not using in current evals 
     """
     input_fasta = f"{scaffold_dir}/{problem_set}/results/{model}/generations/{idx-1}_{pdb_name}.fasta"
     output_tsv_prefix = f"{input_path}/{model}/{idx}_{pdb_name}/{idx}_{pdb_name}"
@@ -56,10 +56,9 @@ def fallback_cluster(input_dir, output_tsv_prefix, tmscore_threshold):
             )
             # parse the first “TM-score=” we find
             score = None
-            #print(proc.stdout)
+            #print(proc.stdout) # verify this pattern appears 
             for line in proc.stdout.splitlines():
                 if line.startswith("TM-score    ="):
-                    #print(line)
                     try:
                         score = float(line.split("=")[1].split()[0])
                         #print(score)
@@ -85,7 +84,7 @@ def fallback_cluster(input_dir, output_tsv_prefix, tmscore_threshold):
                 mem_name = os.path.basename(pdb_files[mi])
                 fw.write(f"{rep_name}\t{mem_name}\n")
 
-def run_foldseek(input_path, model, pdb_index, pdb_name, #scaffold_dir, problem_set,
+def run_foldseek(input_path, model, pdb_index, pdb_name,
                  alignment_type=1, tmscore_threshold=0.6, alignment_mode=2,
                  ):
 
@@ -122,11 +121,9 @@ def main():
     parser.add_argument('--model-name', type=str, default='dayhoff-170m', 
                         help='Model name can be dayhoff-170m, dayhoff-3b, or evodiff') 
     parser.add_argument('--path-to-generated', type=str, default='model-evals/scaffolding-results/folding_cleaned',
-                        help=f'Path to folded designed sequences. Output of organize_scaffold_outputs.py Seqs should be contained in problem_set/model_name/') # {[pdb}/{pdb}_{n_design}.pdb]}
+                        help='Path to folded designed sequences. Output of organize_scaffold_outputs.py Seqs should be contained in problem_set/model_name/') # {[pdb}/{pdb}_{n_design}.pdb]}
     parser.add_argument('--out-fpath', type=str, default='model-evals/scaffold_results/',
                         help='Where to save results of scaffolding') # save dir
-    # parser.add_argument('--scaffold-dir', type=str, default='scaffolding',
-    #                     help="""Path to fasta files with generations from models. format args.scaffold_dir/problem_set/results/model_name/generations/problem_id_problem_pdb.fasta""")
 
     args = parser.parse_args()
 
@@ -151,9 +148,7 @@ def main():
             run_foldseek(input_path,
                         args.model_name, 
                         pdb_index,
-                        pdb_name, 
-                        # args.scaffold_dir, 
-                        # args.problem_set,
+                        pdb_name,
                         alignment_type=1, 
                         tmscore_threshold=0.6, 
                         alignment_mode=2)
@@ -161,8 +156,7 @@ def main():
         # read foldseek outputs, get a cluster_id per sequence 
         df = pd.read_csv(foldseek_output_file,
         names=['rep', 'member'], delimiter='\t', usecols=[0,1]) # both mmseqs and foldseek output have same format on first 2 cols
-        
-        #print(df.head())
+
         # get generation ids and rep ids from df 
         for new_col, old_col in zip(['generation_ids', 'rep_ids'], ['member', 'rep']):
             df[new_col] = (
@@ -172,7 +166,6 @@ def main():
 
         #merge with rmsd_df results on generation_ids to get unique seqs     
         df = df.merge(rmsd_df, on='generation_ids', how='inner')
-        #print(df.head())
 
         print("saving dataframe to:", f'{args.out_fpath}/{args.problem_set}/{args.model_name}/{pdb_index:02d}_{pdb_name}_unique.csv')
         df.to_csv(f'{args.out_fpath}/{args.problem_set}/{args.model_name}/{pdb_index:02d}_{pdb_name}_unique.csv', index=False)
