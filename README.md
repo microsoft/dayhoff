@@ -53,11 +53,11 @@ pip install git+https://github.com/microsoft/dayhoff.git
 
 **Mamba-ssm and causal-conv1d recommendations** 
 
-It is sometimes challenenging to properly install these packages just using pip. The following two errors are common when simply using pip install:
-* packages installed correctly, but when loading models you get "ValueError: Fast Mamba kernels are not available. Make sure to they are installed and that the mamba module is on a CUDA device."
-* Package instalation of causal-conv1d or mamba-ssm fail during the build
+It is sometimes challenging to properly install these packages just using pip. The following two errors are common when simply using pip install:
+* packages installed correctly, but when loading models you get "ValueError: Fast Mamba kernels are not available. Make sure they are installed and that the mamba module is on a CUDA device."
+* Package installation of causal-conv1d or mamba-ssm fails during the build
 
-If you encounter any of these erros, try installing using the following commands:
+If you encounter any of these errors, try installing using the following commands:
 
 ```bash
 git clone https://github.com/Dao-AILab/causal-conv1d.git
@@ -84,7 +84,7 @@ docker run -it samirchar/dayhoff:latest
 
 All Dayhoff models are available on [AzureAIFoundry](https://ai.azure.com/labs)
 
-Additionally, all Dayhoff models are also hosted on [Hugging Face](https://huggingface.co/collections/microsoft/dayhoff-atlas-6866d679465a2685b06ee969) 🤗. All datasets used in the paper, with the excecption of OpenProteinSet are available on Hugging Face in three formats: FASTA, Arrow, and JSONL. 
+Additionally, all Dayhoff models are also hosted on [Hugging Face](https://huggingface.co/collections/microsoft/dayhoff-atlas-6866d679465a2685b06ee969) 🤗. All datasets used in the paper, with the exception of OpenProteinSet are available on Hugging Face in three formats: FASTA, Arrow, and JSONL. 
 
 GigaRef, BackboneRef, and DayhoffRef are available under [CC BY License](https://creativecommons.org/licenses/by/4.0/)
 
@@ -155,8 +155,8 @@ Weights are available for the following models, as described in the [paper](aka.
 * **Dayhoff-170m-UR90**: A 170M parameter model trained on members sampled from UniRef90 clusters
 * **Dayhoff-170m-GR** : A 170M parameter model trained on members sampled from GigaRef clusters
 * **Dayhoff-170m-BRu**: A 170M parameter model trained on UniRef50 cluster representatives and samples from unfiltered BackboneRef
-* **Dayhoff-170m-BRq**: A 170M parameter model trained on UniRef50 cluter representatives and samples from quality-filtered BackboneRef
-* **Dayhoff-170m-BRn**: A 170M parameter model trained on UniRef50 cluter representatives and samples from novelty-filtered BackboneRef
+* **Dayhoff-170m-BRq**: A 170M parameter model trained on UniRef50 cluster representatives and samples from quality-filtered BackboneRef
+* **Dayhoff-170m-BRn**: A 170M parameter model trained on UniRef50 cluster representatives and samples from novelty-filtered BackboneRef
 
 ### 3B parameter models
 * **Dayhoff-3b-UR90**: A 3B parameter model trained on members sampled from UniRef90 clusters
