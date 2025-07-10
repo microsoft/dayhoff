@@ -127,6 +127,10 @@ class ARDiffusionModel(nn.Module,PyTorchModelHubMixin):
             output = self.module(src)
         output = output["logits"]
         return output
+<<<<<<< HEAD
+=======
+
+>>>>>>> sarah/dev
 
 
 class MSAModelWithMetrics(nn.Module,PyTorchModelHubMixin):

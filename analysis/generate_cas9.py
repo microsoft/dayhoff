@@ -24,8 +24,10 @@ from dayhoff.utils import (load_msa_config_and_model,
 RANK = int(os.environ["RANK"])
 #LOCAL_RANK = int(os.environ["LOCAL_RANK"])
 WORLD_SIZE = int(os.environ["WORLD_SIZE"])
-DEVICE = torch.device(f"cuda:{RANK + 2}")
+DEVICE = torch.device(f"cuda:{RANK}")
 print("device", DEVICE)
+
+in_dir = "/home/salamdari/Desktop/dayhoff/data/characterized_cas9s"
 
 
 
@@ -44,11 +46,11 @@ def generate(args: argparse.Namespace) -> None:
         model, None, None, args.in_fpath, args.checkpoint_step, rank=RANK
     )
     # Move only model to GPU
+    print("DEVICE", DEVICE)
     model = model.to(DEVICE)
     model = model.to(torch.bfloat16)
     out_dir = args.out_dir
-    in_dir = "/home/kevyan/data/characterized_cas9s"
-
+    
     all_tokens = list(range(40))
     allowed_tokens = [UL_ALPHABET_PLUS.index(aa) for aa in CAN_AAS]
     if args.gap:
@@ -97,9 +99,16 @@ def generate(args: argparse.Namespace) -> None:
                     ells = np.array([len(s.replace('-', '')) for s in seqs])
                     if min(ells) < 1000:
                         break
+<<<<<<< HEAD
                 idx = np.argsort(ells)
                 idx = idx[::-1]
                 seqs = [seqs[i] for i in idx]
+=======
+                # Sort sequences by length
+                #idx = np.argsort(ells)
+                #idx = idx[::-1]
+                #seqs = [seqs[i] for i in idx]
+>>>>>>> sarah/dev
                 if args.rev:
                     seqs = [s[::-1] for s in seqs]
                 if args.gap:

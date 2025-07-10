@@ -1,23 +1,19 @@
 import argparse
 import os
 import subprocess
-from tqdm import tqdm
 
-from Bio.PDB import PDBParser
 import numpy as np
 import pandas as pd
-from sequence_models.utils import parse_fasta
 import torch
-
-from transformers.models.esm.openfold_utils.protein import to_pdb, Protein as OFProtein
-from transformers.models.esm.openfold_utils.feats import atom14_to_atom37
+from Bio.PDB import PDBParser
+from sequence_models.utils import parse_fasta
 from transformers import AutoTokenizer, EsmForProteinFolding
+from transformers.models.esm.openfold_utils.feats import atom14_to_atom37
+from transformers.models.esm.openfold_utils.protein import Protein as OFProtein
+from transformers.models.esm.openfold_utils.protein import to_pdb
 
-PATH_TO_PROTEINMPNN = "/home/kevyan/src/ProteinMPNN/"
-# PATH_TO_PROTEINMPNN = "ProteinMPNN/"
-
+PATH_TO_PROTEINMPNN = "ProteinMPNN/"
 CWD = os.getcwd()
-
 
 def get_bfactor(filename, chain="A"):
     parser = PDBParser(PERMISSIVE=1)
@@ -51,8 +47,8 @@ def run_omegafold(input_fasta, output_dir, subbatch_size=1024):
                 "omegafold",
                 input_fasta,
                 output_dir,
-                "--subbatch_size", str(subbatch_size)  # optional?
-            ], check=True
+                "--subbatch_size", str(subbatch_size) # optional?
+            ],check=True
         )
 
 
@@ -79,8 +75,8 @@ def convert_outputs_to_pdb(outputs):
     return pdbs
 
 
-def parse_fasta_bad_kevin(fasta_fpath, return_names=False):
-    """ Parse fasta when kevin forgot to add ">" to comment lines"""
+def parse_fasta_missing_caret(fasta_fpath, return_names=False):
+    """ Parse fasta when missing ">" in comment lines"""
     seqs = []
     with open(fasta_fpath) as f_in:
         current = ''
@@ -96,26 +92,79 @@ def parse_fasta_bad_kevin(fasta_fpath, return_names=False):
     else:
         return seqs
 
+def get_all_paths(pdb_path, mpnn_path):
+        all_files = []
+        all_mpnn_files = []
+        for i in os.listdir(pdb_path):
+            if '.pdb' in i:
+                all_files.append((os.path.join(pdb_path, i), i))
+        for j in os.listdir(mpnn_path):
+            all_mpnn_files.append((j, os.path.join(mpnn_path)))
+                
+        print(f"PDB Files: {len(all_files)}, MPNN Files: {len(all_mpnn_files)}")
+        return all_files, all_mpnn_files
 
+
+def results_to_pandas(all_files, all_mpnn_files, fold_method="omegafold", if_method="mpnn"):
+
+    plddts = []
+    perps = []
+    fold_full_path = []
+    fold_files = []
+    mpnn_files = []
+
+    for i, f in all_files: 
+        if os.path.exists(i):
+            plddts.append(get_bfactor(i))
+            fold_files.append(f.split('.pdb')[0])
+            fold_full_path.append(i)
+    
+    for f, mpnn_output_paths in all_mpnn_files: 
+        subdir_files = os.listdir(os.path.join(mpnn_output_paths, f, 'scores/'))
+        for mfile in subdir_files:
+            file = os.path.join(mpnn_output_paths, f, 'scores/', mfile)
+            if file.split('/')[-1] != '.ipynb_checkpoints':
+                perp = get_mpnn_perp(file)
+                mpnn_files.append(mfile.split('/')[-1].split('.npz')[0])
+                perps.append(perp)
+    
+    fold_dict = {
+            "full_path": fold_full_path,
+            f"{fold_method}plddt": plddts,
+            "file": fold_files,
+    }
+    
+    mpnn_dict = {
+            f"{if_method}perplexity": perps,
+            "file": mpnn_files,
+    }
+    
+    fold_df = pd.DataFrame(fold_dict)
+    mpnn_df = pd.DataFrame(mpnn_dict)
+    merged_df = pd.merge(fold_df, mpnn_df, on='file', how='inner') # merge on file name 
+
+    return fold_df, mpnn_df, merged_df
+
+    
 def parse_csv(csv_path, return_names=False):
     """ Parse a CSV file and return the 'sequence' column """
     import csv
-
+    
     sequences = []
     headers = []
-
+    
     with open(csv_path, 'r') as csvfile:
         csv_reader = csv.reader(csvfile)
-
+        
         # Get headers from the first row
         headers = next(csv_reader)
-
+        
         # Find the index of the 'sequence' column
         try:
             seq_index = headers.index('sequence')
         except ValueError:
             raise ValueError("CSV file does not contain a 'sequence' column")
-
+        
         # Extract sequences from the appropriate column
         for row in csv_reader:
             if len(row) > seq_index:
@@ -125,26 +174,32 @@ def parse_csv(csv_path, return_names=False):
     else:
         return sequences
 
-
 def run_esmfold(input_fasta: str,
-                output_dir: str,
-                num_recycles: int = None,  # num_recycles = None means max num_recycles
+                output_dir:str,
+                num_recycles: int = None, # num_recycles = None means max num_recycles
                 esm_chunk_size: int = 64,
                 short_or_long: str = 'short',
-                bad_kevin: bool = False,
-                device=torch.device('cuda:0')):
+                missing_caret: bool = False):
+    
     #    raise FileNotFoundError(f"Input fasta file {input_fasta} not found.")
 
     # Parse fasta
-    if bad_kevin:
-        seqs, seq_names = parse_fasta_bad_kevin(input_fasta, return_names=True)
+    if missing_caret:
+        seqs, seq_names = parse_fasta_missing_caret(input_fasta, return_names=True)
     else:
         seqs, seq_names = parse_fasta(input_fasta, return_names=True)
-    seq_ids = [seq_name.split()[0] for seq_name in
-               seq_names]  # In case record contains annotations, just keep sequence ID.
+    seq_ids = [seq_name.split()[0] for seq_name in seq_names] # In case record contains annotations, just keep sequence ID.
 
+    # Filter out None values from both lists
+    # filtered_pairs = [(seq, id) for seq, id in zip(seqs, seq_ids) if seq is not None and id is not None]
+    # if len(filtered_pairs) < len(seqs):
+    #     print(f"Filtered out {len(seqs) - len(filtered_pairs)} None values from sequences")
+    
+    # Unpack the filtered pairs back into separate lists
+    #seqs, seq_ids = zip(*filtered_pairs) if filtered_pairs else ([], [])
+    
     seqs, seq_ids = zip(*sorted(zip(seqs, seq_ids), key=lambda x: len(x[0])))
-    # print(seqs)
+    #print(seqs)
 
     if short_or_long == "short":
         # only run less than 800 res on 32GB gpus
@@ -156,19 +211,22 @@ def run_esmfold(input_fasta: str,
         select_array = [len(s) >= 800 for s in seqs]
         filtered_seqs = [s for i, s in enumerate(seqs) if select_array[i]]
         filtered_seq_ids = [s for i, s in enumerate(seq_ids) if select_array[i]]
-    else:  # dont filter if anything else
+    elif short_or_long == "crop": 
+        filtered_seqs = [s[:1750] for s in seqs]
+        filtered_seq_ids = seq_ids
+    else: # dont filter if anything else
         filtered_seqs = seqs
         filtered_seq_ids = seq_ids
 
-    # Load model and set config
+    #Load model and set config
     model = EsmForProteinFolding.from_pretrained("facebook/esmfold_v1")
     model.eval()
-    model = model.to(device)
+    model = model.cuda()
 
-    # Memory savings
-    model.esm = model.esm.half()  # switch stem to half precision
-    torch.backends.cuda.matmul.allow_tf32 = True  # allow TensorFloat32 computation if HW supports it.
-    model.trunk.set_chunk_size(esm_chunk_size)  # Lower chunk size = less memory but slower.
+    #Memory savings
+    model.esm = model.esm.half() #switch stem to half precision
+    torch.backends.cuda.matmul.allow_tf32 = True #allow TensorFloat32 computation if HW supports it.
+    model.trunk.set_chunk_size(esm_chunk_size) # Lower chunk size = less memory but slower.
 
     # Tokenize sequences
     tokenizer = AutoTokenizer.from_pretrained("facebook/esmfold_v1")
@@ -176,27 +234,20 @@ def run_esmfold(input_fasta: str,
     print("Min:", min([len(s) for s in seqs]), "Max:", max([len(s) for s in seqs]))
     print("Min:", min([len(s) for s in filtered_seqs]), "Max:", max([len(s) for s in filtered_seqs]))
 
+
     # Could do batching, though I got inconsistent results and this seems fast while saving memory.
-    for seq_id, seq in tqdm(zip(filtered_seq_ids, filtered_seqs)):
-        if not os.path.exists(os.path.join(output_dir, f"{seq_id}.pdb")):
-            seq = seq.replace("-", "")
-            seq = seq.replace("<mask2>", "")
-            seq = seq.replace("<mask1>", "")
-            seq = seq.replace("<mask3>", "")
-            seq = seq.replace("<eos>", "")
+    for seq_id, seq in zip(filtered_seq_ids,filtered_seqs):
+        print(seq_id, seq, len(seq))
+        if seq is not None:
+            if not os.path.exists(os.path.join(output_dir, f"{seq_id}.pdb")):
+                inputs = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids'].cuda()
+                with torch.no_grad():
+                    outputs = model(inputs,num_recycles=num_recycles)
 
-            try:
-                inputs = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids'].to(device)
-            except ValueError:
-                print(seq_id, seq)
-                continue
-            with torch.no_grad():
-                outputs = model(inputs, num_recycles=num_recycles)
+                pdb = convert_outputs_to_pdb(outputs)
 
-            pdb = convert_outputs_to_pdb(outputs)
-
-            with open(os.path.join(output_dir, f"{seq_id}.pdb"), "w") as f:
-                f.write("".join(pdb))
+                with open(os.path.join(output_dir,f"{seq_id}.pdb"), "w") as f:
+                    f.write("".join(pdb))
 
 
 def run_inversefold(input_folder, output_folder, pdb_files, chain_id="A", temperature=1, num_samples=1, method="mpnn"):
@@ -212,9 +263,9 @@ def run_inversefold(input_folder, output_folder, pdb_files, chain_id="A", temper
                         "analysis/sample_sequences.py", input,
                         "--chain", chain_id,
                         "--temperature", str(temperature),
-                        "--num-samples", str(num_samples),
+                        "--num-samples",str(num_samples),
                         "--outpath", int_path,
-                    ], check=True
+                    ],check=True
                 )
             if os.path.exists(input) and not os.path.exists(out_path):
                 subprocess.run(
@@ -225,10 +276,10 @@ def run_inversefold(input_folder, output_folder, pdb_files, chain_id="A", temper
                         out_path,
                         "--chain", chain_id,
                         "--outpath", out_path,
-                    ], check=True
+                    ],check=True
                 )
         elif method == "mpnn":
-            out_path = os.path.join(output_folder, str(i))
+            out_path = os.path.join(output_folder,str(i))
             if os.path.exists(input):
                 subprocess.run(
                     [
@@ -242,13 +293,13 @@ def run_inversefold(input_folder, output_folder, pdb_files, chain_id="A", temper
                         "--seed", str(37),
                         "--batch_size", str(1),
                         "--save_score", str(1),
-                    ], check=True
+                    ],check=True
                 )
 
 
 def write_queries(input_fasta):
     files = os.listdir(input_fasta)
-    files = [f for f in files if f != 'queries.fasta']  # in case already written too, and overwriting
+    files = [f for f in files if f != 'queries.fasta'] # in case already written too, and overwriting
     generations = []
     originals = []
     for file in files:
@@ -269,7 +320,7 @@ def write_queries(input_fasta):
         print("writing queries and og seqs to file")
         for i, f in enumerate(files):
             if generations[i] != "":
-                f_write.write('>generated_' + f + '\n')
+                f_write.write('>generated_'+f + '\n')
                 f_write.write(generations[i] + '\n')
             if originals[i] != "":
                 f_write.write('>original_' + f + '\n')
@@ -278,9 +329,9 @@ def write_queries(input_fasta):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input-fasta", type=str, default='generated/queries.fasta')  # use queries.fasta for MSA runs
+    parser.add_argument("--input-fasta", type=str, default='generated/queries.fasta') # use queries.fasta for MSA runs
+    parser.add_argument("--csv", action="store_true") # Use CSV input instead of fasta
     parser.add_argument("--output-path", type=str, default='generated/')  # where to save results
-    parser.add_argument("--restart", action="store_true")  # bypass running if/folding
     parser.add_argument("--msa", action="store_true")  # will extract queries
     parser.add_argument("--fold-method", type=str, default='omegafold')
     parser.add_argument("--if-method", type=str, default='proteinmpnn')
@@ -288,19 +339,18 @@ def main():
     parser.add_argument("--esmfold-num-recycles", type=int, default=None)
     parser.add_argument("--esmfold-chunk-size", type=int, default=32)
     parser.add_argument("--esmfold-filter-seqs", action="store_true")
-    parser.add_argument("--short-or-long", type=str,
-                        default='all')  # short < 800, long >= 800 for running on <40GB gpu, `all` dont filter
-    parser.add_argument("--bad-kevin", action="store_true")  # TODO clean up later
-    parser.add_argument("--skip-folding", action="store_true")  # TODO clean up later
-    parser.add_argument("--csv", action="store_true")  # Use CSV input
-    parser.add_argument("--device", type=int, default=0)
+    parser.add_argument("--missing-caret", action="store_true") # Fastas where we forgot ">" in headers
+    parser.add_argument("--short-or-long", type=str, default='all') # short < 800, long >= 800 for running on <40GB gpu, `all` dont filter
+    parser.add_argument("--skip-folding", action="store_true") # TODO clean up later
+    parser.add_argument("--skip-if", action="store_true")  # bypass running if/folding
+    
 
     args = parser.parse_args()
-
+    
     pdb_path = os.path.join(args.output_path, "pdb", args.fold_method)
     os.makedirs(pdb_path, exist_ok=True)
-    device = torch.device(f"cuda:{args.device}")
-    if args.msa:  # write queries to a single fasta file
+
+    if args.msa: # write queries to a single fasta file
         write_queries(os.path.dirname(args.input_fasta))
 
     # Run folding model
@@ -309,23 +359,23 @@ def main():
         if args.csv:
             # Parse the CSV file to get sequences
             seqs = parse_csv(args.input_fasta)
-            seq_names = [f"seq_{i + 1}" for i in range(len(seqs))]
-
+            seq_names = [f"seq_{i+1}" for i in range(len(seqs))]
+            
             # Create a temporary FASTA file in the same location as the input CSV
-            temp_fasta_path = os.path.join(os.path.dirname(args.input_fasta),
-                                           f"temp_{os.path.basename(args.input_fasta)}.fasta")
-
+            temp_fasta_path = os.path.join(os.path.dirname(args.input_fasta), 
+                                         f"temp_{os.path.basename(args.input_fasta)}.fasta")
+            
             # Write sequences to the temporary FASTA file
             with open(temp_fasta_path, 'w') as f:
                 for seq_name, seq in zip(seq_names, seqs):
                     f.write(f">{seq_name}\n{seq}\n")
-
+            
             # Use the temporary file as input for the rest of the pipeline
             input_fasta_path = temp_fasta_path
         else:
             # Use the original input FASTA path
             input_fasta_path = args.input_fasta
-
+        
         # Run the folding model with the appropriate input path
         if args.fold_method == "esmfold":
             run_esmfold(input_fasta=input_fasta_path,
@@ -333,8 +383,7 @@ def main():
                         num_recycles=args.esmfold_num_recycles,
                         esm_chunk_size=args.esmfold_chunk_size,
                         short_or_long=args.short_or_long,
-                        bad_kevin=args.bad_kevin,
-                        device=device)
+                        missing_caret=args.missing_caret)
 
         elif args.fold_method == "omegafold":
             if not os.listdir(pdb_path):
@@ -343,25 +392,41 @@ def main():
                 print("PDBs in omegafold directory")
         else:
             print("Only omegafold and esmfold methods are supported")
+        
 
     # Run inverse_fold
-    # pdb_index = run_inversefold(args.input_path, method="esmif")
-    if_temps = [1]
+    if_temps = [1, 0.5, 0.1]
     pdb_indices = {}
     mpnn_output_paths = {}
 
-    if_method = 'mpnn'
+    if_method = 'mpnn' # TODO Might break with esmfold - have not tested 
     for t in if_temps:
         output_folder = os.path.join(args.output_path, args.fold_method + if_method + '_iftemp_' + str(t) + "/")
         pdb_files = os.listdir(pdb_path)
         os.makedirs(output_folder, exist_ok=True)
         pdb_indices[t] = [(i, os.path.join(pdb_path, input_pdb)) for (i, input_pdb) in enumerate(pdb_files)]
         mpnn_output_paths[t] = output_folder
-        if not args.restart:
+        if not args.skip_if:
             run_inversefold(pdb_path, output_folder, pdb_files, method=if_method, temperature=t)
 
 
+    # Compile results 
+    all_results = []
+    for t in if_temps:
+        all_files, all_mpnn_files = get_all_paths(pdb_path, mpnn_output_paths[t])
+        _, _, merged_df = results_to_pandas(all_files, all_mpnn_files, fold_method=args.fold_method, if_method=args.if_method)
+        # Add a column for the iftemp value
+        merged_df['if_temp'] = t
+        all_results.append(merged_df)
 
+    # Combine all results into a single dataframe
+    if all_results:
+        final_df = pd.concat(all_results, ignore_index=True)
+        # Write to a single CSV file
+        csv_path = os.path.join(args.output_path, args.fold_method + "_" + args.if_method + "_merge_data.csv")
+        final_df.to_csv(csv_path, index=False)
+        print(f"All results saved to {csv_path}")
+    
+    
 if __name__ == "__main__":
     main()
-
