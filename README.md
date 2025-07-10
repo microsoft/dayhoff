@@ -24,7 +24,7 @@ If you use the code, data, models, or results. please cite our [preprint](aka.ms
 * [Unconditional generation](#Unconditional-generation)
 * [Homolog-conditioned generation](#Homolog-conditioned-generation)
 * [Analysis](#Analysis-scripts)
-* [Out of scope use-cases](#out-of-scope-use-cases)
+* [Out-of-scope use cases](#out-of-scope-use-cases)
 * [Responsible AI](#responsible-ai-considerations)
 * [Contributing](#Contributing)
 * [Trademarks](#Trademarks)
