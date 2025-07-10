@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 _ = sns.set_style("white")
-
 input_dir = "/home/kevyan/generations/dayhoffref/"
+
 df_50 = pd.read_csv(os.path.join(input_dir, 'c50.tsv'), sep='\t', header=None)
 c50 = [None] * len(df_50)
 current_pos = 0

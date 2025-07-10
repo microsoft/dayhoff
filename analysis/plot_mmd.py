@@ -1,13 +1,13 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-import seaborn as sns
-import pandas as pd
-from glob import glob
-from collections import defaultdict
 import argparse
 import os
+from collections import defaultdict
+from glob import glob
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from matplotlib.lines import Line2D
 
 sns.set_theme(font_scale=1.2)
 sns.set_style('white')

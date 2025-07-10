@@ -1,10 +1,9 @@
-from tqdm import tqdm
-import os
 import json
-import jsonlines
+import os
 
+import jsonlines
 import numpy as np
-import pandas as pd
+from tqdm import tqdm
 
 out_file = "/data/gigaref/gigaref.jsonl"
 gigaref_dir = "/data/gigaref/"

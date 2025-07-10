@@ -1,18 +1,17 @@
-import torch
-import numpy as np
-import pandas as pd
-from torch.utils.data import Dataset
-import h5py
-import time
-from glob import glob
-from concurrent.futures import ThreadPoolExecutor
-import os
-from multiprocessing import cpu_count
-from tqdm import tqdm
-
-from torchvision import transforms
 import argparse
 import logging
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from glob import glob
+
+import h5py
+import numpy as np
+import torch
+from torch.utils.data import Dataset
+from torchvision import transforms
+from tqdm import tqdm
+
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 logger = logging.getLogger(__name__)
@@ -29,6 +28,7 @@ logger.addHandler(file_handler)
 
 def rbf_numerator(X,Y):
     return X@X.T + Y@Y.T - 2*X@Y.T
+
 
 # def rbf_kernel(X, Y, sigma=1.0):
 def mmd_rbf(X, Y, sigma=1.0):
@@ -57,6 +57,7 @@ def mmd_rbf(X, Y, sigma=1.0):
     
     return k_xx.sum()/(m*(m-1)) + k_yy.sum()/(n*(n-1)) - 2*k_xy.sum()/(m*n)
 
+
 def load_h5_as_array(file_path,key = 'logits_df',retries=5, wait=5):
     # Open the file in read mode and load the desired dataset.
     for attempt in range(retries):
@@ -78,6 +79,7 @@ def get_h5_shape(file_path,key = 'logits_df'):
         # Assuming data is stored in the first dataset
         return f[key]['block0_values'].shape
 
+
 def multiple_h5s_to_tensor(file_paths,max_workers=8):
     # Create an empty list to store the data
     # Use ThreadPoolExecutor to read files concurrently
@@ -86,8 +88,6 @@ def multiple_h5s_to_tensor(file_paths,max_workers=8):
 
     return torch.from_numpy(np.concatenate(arrays, axis=0))
 
-# def multiple_h5s_to_tensor_dask(file_paths):
-    
 
 class ProteinLabelDistributions(Dataset):
     def __init__(self, dataset_name: str, h5_paths: list, cache: bool = True, max_workers: int = 8):
@@ -160,6 +160,7 @@ class RunningMeanVariance:
             (self.mean, self.sample_variance) = (self.mean, self.M2 / (self.count - 1))
             return (self.mean, self.sample_variance)
 
+
 def get_sigma_median(dl_Y, dl_X, num_iterations,subbatch_size,device,debug=False):
 
     dl_Y_iter, dl_X_iter = subbatch_iterator(dl_Y, subbatch_size, device='cpu'), subbatch_iterator(dl_X, subbatch_size, device='cpu')
@@ -217,7 +218,6 @@ def get_sigma_median(dl_Y, dl_X, num_iterations,subbatch_size,device,debug=False
     pbar.close()
     return median_dist_means, median_dist_stds, median_dist_std_errors
 
-
         
 def get_running_stats(data_loader, num_iterations,device):
 
@@ -244,7 +244,6 @@ def get_running_stats(data_loader, num_iterations,device):
     mean_std_errors = mean_stds/np.sqrt(np.arange(2, num_iterations + 1))
     pbar.close()
     return mean_means, mean_stds, mean_std_errors
-
 
 
 def get_mmd_stats(dl_Y, dl_X, num_iterations,subbatch_size,sigma,device):
@@ -290,7 +289,6 @@ def get_mmd_stats(dl_Y, dl_X, num_iterations,subbatch_size,sigma,device):
     return mmd_means, mmd_stds, mmd_std_errors, mmds
 
 
-
 def subbatch_iterator(dataloader, subbatch_size, device):
     for batch in dataloader:
         batch = batch.squeeze(0)
@@ -299,8 +297,6 @@ def subbatch_iterator(dataloader, subbatch_size, device):
             yield subbatch.to(device)
 
 # Test Cases #
-
-
 # X = torch.tensor([[0.0, 0.0],
 #                     [1.0, 1.0]])
 # Y = torch.tensor([[1.0, 0.0],
@@ -314,8 +310,6 @@ def subbatch_iterator(dataloader, subbatch_size, device):
 # logger.info(f"Expected MMD (manual): {expected:.4f}")
 
 # assert abs(result.item() - expected) < 1e-3, "Mismatch with manual MMD calculation"
-
-
 
 # X = torch.tensor([[1.0, 2.0],
 #                     [3.0, 4.0]])
@@ -440,8 +434,6 @@ if __name__ == "__main__":
                 pin_memory=True,
                 shuffle=False
             )
-
-
 
             #Params
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

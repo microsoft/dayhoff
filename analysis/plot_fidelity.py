@@ -96,8 +96,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # adjust input_file to use selected fold
-    base_dir = os.path.dirname(args.in
-    put_file)
+    base_dir = os.path.dirname(args.input_file)
     filename = f"{args.fold}_proteinmpnn_merge_data.csv"
     args.input_file = os.path.join(base_dir, filename)
 

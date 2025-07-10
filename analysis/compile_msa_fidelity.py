@@ -1,16 +1,17 @@
 import os
 from collections import Counter
-from tqdm import tqdm
-
-import pandas as pd
-import numpy as np
-from Bio.Align import PairwiseAligner
-from scipy.stats import pearsonr
-from dayhoff.analysis_utils import results_to_pandas, get_all_paths, run_tmscore
-from sequence_models.utils import parse_fasta
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
+from Bio.Align import PairwiseAligner
+from scipy.stats import pearsonr
+from sequence_models.utils import parse_fasta
+from tqdm import tqdm
+
+from dayhoff.analysis_utils import get_all_paths, results_to_pandas, run_tmscore
+
 sns.set_theme(font_scale=1.2)
 sns.set_style('white')
 
@@ -27,15 +28,7 @@ for m in models:
     merged_df['model'] = m
     raw_dfs.append(merged_df)
 df = pd.concat(raw_dfs, ignore_index=True)
-# len(set(df[df['model'] == 'gap_1.2_0.01']['file']))
-# model_to_name = {
-#     "natural": "queries",
-#     "xlstm": "xlstm",
-#     "evodiff": "evodiff",
-#     "gap": "3b-cooled_25000_gap_t1.0_0.00",
-#     "ccmgen": "ccmgen",
-#     "indel": "3b-cooled_25000_indel_t1.0_0.00"
-# }
+
 model_to_name = {m: m for m in models}
 model_to_name['natural'] = 'queries'
 model_to_name['gap_1.0_0.01'] = '3b-cooled_25000_gap_t1.0_0.01'

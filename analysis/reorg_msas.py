@@ -1,12 +1,15 @@
 import argparse
 import os
 import shutil
-import tqdm as tqdm
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import tqdm as tqdm
+
 
 def rename_from_path(path):
     return '-'.join(path.split('/'))
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -19,7 +22,6 @@ def main():
     metadata = pd.read_csv(os.path.join(args.path_to_dataset, 'out', args.split + "_index_processed.csv"))
     metadata_split = np.array_split(metadata, args.chunks)
     print(metadata_split)
-
 
     if not os.path.exists(os.path.join(args.output_path, args.split)):
         os.makedirs(os.path.join(args.output_path, args.split), exist_ok=True)

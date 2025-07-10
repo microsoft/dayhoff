@@ -1,11 +1,11 @@
-from tqdm import tqdm
 import os
+
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
+
 
 def main():
-    # gigaref_dir = "/mnt/amlt/data/gigaref/"
-    # out_dir = "/mnt/amlt/evodiff/generations/gigaref_analysis/"
     out_dir = "/home/kevyan/generations/gigaref_analysis/"
     gigaref_dir = "/home/kevyan/eastus2/data/gigaref/"
     fasta_file = os.path.join(gigaref_dir, "consensus.fasta")

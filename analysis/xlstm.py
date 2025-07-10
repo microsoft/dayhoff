@@ -1,17 +1,19 @@
 import argparse
 import os
-from tqdm import tqdm
-
 
 import numpy as np
-
 import torch
-
-from protxlstm.utils import load_sequences_from_msa_file, tokenizer, AA_TO_ID, reorder_masked_sequence, load_model
+from protxlstm.dataloaders import ProteinMemmapDataset
 from protxlstm.generation import generate_sequence
 from protxlstm.models.xlstm import xLSTMLMHeadModel
-from protxlstm.dataloaders import ProteinMemmapDataset
-
+from protxlstm.utils import (
+    AA_TO_ID,
+    load_model,
+    load_sequences_from_msa_file,
+    reorder_masked_sequence,
+    tokenizer,
+)
+from tqdm import tqdm
 
 
 def generate(args: argparse.Namespace) -> None:
@@ -96,7 +98,6 @@ def main():
     parser.add_argument("out_fpath", type=str)  # location to write to
     parser.add_argument("--random_seed", type=int, default=0)  #
     parser.add_argument("--device", type=int, default=0)  #
-
 
     args = parser.parse_args()
     generate(args)

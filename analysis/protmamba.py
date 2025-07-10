@@ -1,17 +1,13 @@
 import argparse
 import os
-from tqdm import tqdm
-
 
 import numpy as np
-
 import torch
-
 from ProtMamba_ssm.dataloaders import *
-from ProtMamba_ssm.utils import *
 from ProtMamba_ssm.modules import *
+from ProtMamba_ssm.utils import *
 from protxlstm.dataloaders import ProteinMemmapDataset
-
+from tqdm import tqdm
 
 
 def generate(args: argparse.Namespace) -> None:
@@ -96,8 +92,6 @@ def main():
     parser.add_argument("out_fpath", type=str)  # location to write to
     parser.add_argument("--random_seed", type=int, default=0)  #
     parser.add_argument("--device", type=int, default=0)  #
-
-
     args = parser.parse_args()
     generate(args)
 

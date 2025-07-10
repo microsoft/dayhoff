@@ -15,6 +15,7 @@ from transformers.models.esm.openfold_utils.protein import to_pdb
 PATH_TO_PROTEINMPNN = "ProteinMPNN/"
 CWD = os.getcwd()
 
+
 def get_bfactor(filename, chain="A"):
     parser = PDBParser(PERMISSIVE=1)
     protein = parser.get_structure(chain, filename)
@@ -182,24 +183,13 @@ def run_esmfold(input_fasta: str,
                 missing_caret: bool = False):
     
     #    raise FileNotFoundError(f"Input fasta file {input_fasta} not found.")
-
     # Parse fasta
     if missing_caret:
         seqs, seq_names = parse_fasta_missing_caret(input_fasta, return_names=True)
     else:
         seqs, seq_names = parse_fasta(input_fasta, return_names=True)
     seq_ids = [seq_name.split()[0] for seq_name in seq_names] # In case record contains annotations, just keep sequence ID.
-
-    # Filter out None values from both lists
-    # filtered_pairs = [(seq, id) for seq, id in zip(seqs, seq_ids) if seq is not None and id is not None]
-    # if len(filtered_pairs) < len(seqs):
-    #     print(f"Filtered out {len(seqs) - len(filtered_pairs)} None values from sequences")
-    
-    # Unpack the filtered pairs back into separate lists
-    #seqs, seq_ids = zip(*filtered_pairs) if filtered_pairs else ([], [])
-    
     seqs, seq_ids = zip(*sorted(zip(seqs, seq_ids), key=lambda x: len(x[0])))
-    #print(seqs)
 
     if short_or_long == "short":
         # only run less than 800 res on 32GB gpus
@@ -243,9 +233,7 @@ def run_esmfold(input_fasta: str,
                 inputs = tokenizer([seq], return_tensors="pt", add_special_tokens=False)['input_ids'].cuda()
                 with torch.no_grad():
                     outputs = model(inputs,num_recycles=num_recycles)
-
                 pdb = convert_outputs_to_pdb(outputs)
-
                 with open(os.path.join(output_dir,f"{seq_id}.pdb"), "w") as f:
                     f.write("".join(pdb))
 

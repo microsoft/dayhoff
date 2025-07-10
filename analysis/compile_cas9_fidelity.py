@@ -1,14 +1,10 @@
 import os
-from collections import Counter
+
+from Bio.Align import PairwiseAligner, substitution_matrices
+from sequence_models.utils import parse_fasta
 from tqdm import tqdm
 
-import pandas as pd
-from Bio.Align import PairwiseAligner, substitution_matrices
-from scipy.stats import pearsonr
-
-from dayhoff.analysis_utils import results_to_pandas, get_all_paths, run_tmscore
-from sequence_models.utils import parse_fasta
-
+from dayhoff.analysis_utils import get_all_paths, results_to_pandas
 
 base_path = "/home/kevyan/generations/cas9/"
 

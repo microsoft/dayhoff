@@ -9,15 +9,11 @@
 # score_log_likelihoods.py [-h] [--outpath OUTPATH] [--chain CHAIN] pdbfile seqfile
 
 import argparse
-from biotite.sequence.io.fasta import FastaFile, get_sequences
-import numpy as np
 from pathlib import Path
-import torch
-import torch.nn.functional as F
-from tqdm import tqdm
 
 import esm
 import esm.inverse_folding
+import numpy as np
 
 
 def score_singlechain_backbone(model, alphabet, args):

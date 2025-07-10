@@ -1,14 +1,9 @@
 import os
-from tqdm import tqdm
-import h5py
-import numpy as np
-import pandas as pd
-from scipy import linalg
-import torch
-from sklearn import metrics
-import matplotlib.pyplot as plt
-import seaborn as sns
 
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from sklearn import metrics
 
 model_order = [
     '170m-uniref50',

@@ -1,9 +1,8 @@
 import json
 import os
-from tqdm import tqdm
 
-import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 # make the dict
 taxon_dir = '/home/kevyan/data/taxons/'

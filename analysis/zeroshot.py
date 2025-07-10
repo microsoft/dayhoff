@@ -1,28 +1,20 @@
 import argparse
-import functools
-import string
 import os
-from typing import Sequence, Tuple
-from tqdm import tqdm
 
+import numpy as np
+import pandas as pd
 import torch
 import torch.distributed as dist
-
 import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import DataLoader
-
 from scipy.stats import spearmanr
-
-import pandas as pd
-import numpy as np
 from sequence_models.utils import parse_fasta
-from dayhoff.datasets import ListDataset
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
 from dayhoff.collators import MSAARCollator
+from dayhoff.datasets import ListDataset
 from dayhoff.model import OTHER_METRICS_KEY
-from dayhoff.utils import load_msa_config_and_model, seed_everything, load_checkpoint
-
-
+from dayhoff.utils import load_checkpoint, load_msa_config_and_model, seed_everything
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
@@ -34,8 +26,6 @@ DEVICE = torch.device(f"cuda:{LOCAL_RANK + OFFSET}")
 
 def is_amlt() -> bool:
     return os.environ.get("AMLT_OUTPUT_DIR", None) is not None
-
-
 
 
 def zero_shot(
@@ -173,11 +163,6 @@ def zero_shot(
             df_out.to_csv(df_out_file, index=False)
 
 
-
-
-
-
-
 def train(args: argparse.Namespace) -> None:
     print(f"Starting job on rank {RANK} with local rank {LOCAL_RANK} and world size {WORLD_SIZE}")
     seed_everything(0)
@@ -213,7 +198,6 @@ def train(args: argparse.Namespace) -> None:
     zero_shot(subst_dir, os.path.join(args.out_fpath, 'substitutions'), msa_dir, model, tokenizer, args)
 
 
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("out_fpath", type=str)
@@ -224,9 +208,7 @@ def main():
     parser.add_argument("--no_fa2", action="store_true")
     parser.add_argument("--msa", action="store_true")
     parser.add_argument("--gap", action="store_true")
-
     parser.add_argument("--no_seq", action="store_true")
-
 
     model_name_dict = {
         'jamba-3b-indel-gigaclust-120k-2': 'dayhoff-3b-msa-gigaref',

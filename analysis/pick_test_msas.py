@@ -1,13 +1,11 @@
 import argparse
-from tqdm import tqdm
 import os
 
 import numpy as np
+from sequence_models.constants import GAP
+from tqdm import tqdm
 
 from dayhoff.datasets import OpenProteinDataset, parse_msa
-from sequence_models.constants import GAP
-
-
 
 
 def get_msa_rtest_dataset(data_fpath):
@@ -25,7 +23,6 @@ def get_msa_rtest_dataset(data_fpath):
         no_query_frac=0.0,
     )
     return ds_train
-
 
 
 def main():
@@ -92,8 +89,6 @@ def main():
                         f_aln.write(s + "\n")
                 n_chosen += 1
                 pbar.update(1)
-
-
 
 
 if __name__ == "__main__":

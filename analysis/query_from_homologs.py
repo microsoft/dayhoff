@@ -1,18 +1,14 @@
 import argparse
 import os
-from tqdm import tqdm
-
-from transformers import SuppressTokensLogitsProcessor
 
 import torch
-
-from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP
-from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
-from dayhoff.utils import (load_msa_config_and_model,
-                           load_checkpoint, seed_everything)
+from sequence_models.constants import CAN_AAS, GAP, SEP
 from sequence_models.utils import parse_fasta
+from tqdm import tqdm
+from transformers import SuppressTokensLogitsProcessor
 
-
+from dayhoff.constants import START_AL, START_UL, UL_ALPHABET_PLUS
+from dayhoff.utils import load_checkpoint, load_msa_config_and_model, seed_everything
 
 
 def generate(args: argparse.Namespace) -> None:
@@ -56,24 +52,12 @@ def generate(args: argparse.Namespace) -> None:
             else:
                 tokenize_me = START_UL
             tokenize_me += SEP.join(seqs[1:57]) + SEP
-            # if "gap" in args.task:
-            #     pass
-            #     # tokenize_me += END_AL
-            # else:
-            #     tokenize_me += END_UL
-            #     tokenize_me += START
             start_no_m = torch.tensor(tokenizer.tokenize([tokenize_me])).to(device).view(1, -1)
             tokenize_me += "M"
-            start = torch.tensor(tokenizer.tokenize([tokenize_me])).to(device).view(1, -1)
+            #start = torch.tensor(tokenizer.tokenize([tokenize_me])).to(device).view(1, -1)
             success = False
             attempt = 0
             while not success:
-                # if attempt % 2 == 0:
-                #     st = start
-                #     ml = max_len
-                # else:
-                #     st = start_no_m
-                #     ml = max_len + 1
                 st = start_no_m
                 ml = max_len + 1
                 generated = model.module.generate(st, do_sample=True, logits_processor=[sup],

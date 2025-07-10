@@ -1,34 +1,24 @@
 import argparse
-import datetime
-import json
 import os
-import random
-from typing import Optional, Tuple
-from tqdm import tqdm
-import re
-
 
 import numpy as np
-from transformers import SuppressTokensLogitsProcessor
 import pandas as pd
 import torch
-
-from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
+from sequence_models.constants import CAN_AAS, GAP, SEP
 from sequence_models.utils import parse_fasta
-from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
-from dayhoff.utils import (load_msa_config_and_model,
-                           load_checkpoint, seed_everything)
+from tqdm import tqdm
+from transformers import SuppressTokensLogitsProcessor
 
+from dayhoff.constants import UL_ALPHABET_PLUS
+from dayhoff.utils import load_checkpoint, load_msa_config_and_model, seed_everything
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
-#LOCAL_RANK = int(os.environ["LOCAL_RANK"])
 WORLD_SIZE = int(os.environ["WORLD_SIZE"])
 DEVICE = torch.device(f"cuda:{RANK}")
 print("device", DEVICE)
 
 in_dir = "/home/salamdari/Desktop/dayhoff/data/characterized_cas9s"
-
 
 
 def generate(args: argparse.Namespace) -> None:
@@ -99,16 +89,10 @@ def generate(args: argparse.Namespace) -> None:
                     ells = np.array([len(s.replace('-', '')) for s in seqs])
                     if min(ells) < 1000:
                         break
-<<<<<<< HEAD
-                idx = np.argsort(ells)
-                idx = idx[::-1]
-                seqs = [seqs[i] for i in idx]
-=======
                 # Sort sequences by length
                 #idx = np.argsort(ells)
                 #idx = idx[::-1]
                 #seqs = [seqs[i] for i in idx]
->>>>>>> sarah/dev
                 if args.rev:
                     seqs = [s[::-1] for s in seqs]
                 if args.gap:

@@ -1,23 +1,22 @@
 import argparse
-import json
 import os
-import random
-from typing import Optional, Tuple
 
-from esm.modules import AxialTransformerLayer
-from evodiff.utils import Tokenizer
-from evodiff.metrics import MaskedAccuracyMSA
-import numpy as np
-from sequence_models.esm import MSATransformer
-from sequence_models.losses import MaskedCrossEntropyLossMSA
-from sequence_models.utils import warmup, transformer_lr
 import torch
 import torch.distributed as dist
-import torch.distributed.checkpoint as dcp
-from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
+from sequence_models.utils import transformer_lr
 from torch.optim import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from tqdm import tqdm
+
+from dayhoff.constants import END_AL
+from sequence_models.constants import MSA_ALPHABET_PLUS
+from dayhoff.utils import (load_msa_config_and_model, 
+                           seed_everything,
+                           load_checkpoint, 
+                        )
+
+RANK = int(os.environ["RANK"])
+DEVICE = torch.device(f"cuda:{RANK}")
 
 def teacher_forcing(args: argparse.Namespace) -> None:
     #print(f"Starting job on rank {RANK} with local rank {LOCAL_RANK} and world size {WORLD_SIZE}")
@@ -94,9 +93,6 @@ def teacher_forcing(args: argparse.Namespace) -> None:
             with open(args.out_fpath + "/generated_samples.fasta", "a") as f:
                 f.write(">3BCOOLED_SEQUENCE_" + str(s) + "\n" + str(untokenized[1:-1]) + "\n")
 
-
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("in_fpath", type=str)  # location of checkpoint
@@ -109,7 +105,7 @@ def main():
     parser.add_argument("--random_seed", type=int, default=0)  #
     parser.add_argument("--start_rev", action="store_true")
     args = parser.parse_args()
-    generate(args)
+    teacher_forcing(args)
 
 
 if __name__ == "__main__":

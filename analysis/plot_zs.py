@@ -1,11 +1,10 @@
 import os
 import shutil
 
-import torch
 import numpy as np
-from matplotlib import pyplot as plt
-import seaborn as sns
 import pandas as pd
+import seaborn as sns
+from matplotlib import pyplot as plt
 
 _ = sns.set_style('white')
 

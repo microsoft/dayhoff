@@ -1,19 +1,16 @@
 import os
-from tqdm import tqdm
-import json
 
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
+from tqdm import tqdm
 
 sns.set_theme(font_scale=1.2)
 sns.set_style('white')
 
 gigaref_file = "/data/post_dedup/dedup_clusters.fasta"
-
 out_dir = "/home/kevyan/generations/gigaref_analysis/"
-
 
 
 if not os.path.exists(os.path.join(out_dir, "cluster_compositions.npz")):

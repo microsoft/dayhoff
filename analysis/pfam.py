@@ -1,11 +1,12 @@
 import os
-from tqdm import tqdm
-import pandas as pd
+
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-import seaborn as sns
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from scipy.stats import pearsonr
+from tqdm import tqdm
 
 _ = sns.set_theme(font_scale=1.2)
 _ = sns.set_style('white')

@@ -1,13 +1,14 @@
 import argparse
 import os
+
+import torch
+import torch.distributed as dist
+from sequence_models.constants import CAN_AAS, GAP, MSA_PAD, SEP, START, STOP
 from tqdm import tqdm
 from transformers import SuppressTokensLogitsProcessor
-import torch
-from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
-from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
-from dayhoff.utils import (load_msa_config_and_model,
-                           load_checkpoint, seed_everything)
-import torch.distributed as dist
+
+from dayhoff.constants import END_AL, END_UL, START_AL, START_UL, UL_ALPHABET_PLUS
+from dayhoff.utils import load_checkpoint, load_msa_config_and_model, seed_everything
 
 # default to a single-GPU setup if not present
 if "RANK" not in os.environ and "WORLD_SIZE" not in os.environ:
@@ -18,10 +19,8 @@ if "RANK" not in os.environ and "WORLD_SIZE" not in os.environ:
 
 RANK = int(os.environ["RANK"])
 WORLD_SIZE = int(os.environ["WORLD_SIZE"])
-
 DEVICE = torch.device(f"cuda:{RANK}")
 print("device", DEVICE)
-
 
 
 def generate(args: argparse.Namespace) -> None:
@@ -143,7 +142,6 @@ def generate(args: argparse.Namespace) -> None:
                         f.write(seq + "\n")
                         print(">%d" %i)
                         print(seq, flush=True)
-
 
 
 def main():
