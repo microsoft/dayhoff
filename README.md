@@ -13,12 +13,19 @@ If you use the code, data, models, or results. please cite our [preprint](aka.ms
 ## Table of Contents
 * [Dayhoff](#Dayhoff)
 * [Installation](#Installation)
-* [Data and Model availability](#Code-and-data-availability)
-	* [Datasets](#Available-datasets)
-	* [Models](#Available-models)
+* [Data and Model availability](#Data-and-model-availability)
+    * [Datasets](#Datasets)
+        * [Training Datasets](#training-datasets)
+        * [DayhoffRef Synthetic Dataset](#dayhoffref-synthetic-dataset)
+        * [Loading Datasets in HuggingFace](#loading-datasets-in-huggingface)
+    * [Models](#models)
+        * [170M parameter models](#170m-parameter-models)
+        * [3B parameter models](#3b-parameter-models)
 * [Unconditional generation](#Unconditional-generation)
 * [Homolog-conditioned generation](#Homolog-conditioned-generation)
-* [Analysis scripts](#Analysis-scripts)
+* [Analysis](#Analysis-scripts)
+* [Out of scope use-cases](#out-of-scope-use-cases)
+* [Responsible AI](#responsible-ai-considerations)
 * [Contributing](#Contributing)
 * [Trademarks](#Trademarks)
 * [Intended use](#Intended-use)
@@ -144,18 +151,18 @@ For the largest datasets, consider using `streaming=True`.
 
 Weights are available for the following models, as described in the [paper](aka.ms/dayhoff/preprint)
 
-**170m-parameter models**: 
-* Dayhoff-170m-UR50
-* Dayhoff-170m-UR90
-* Dayhoff-170m-GR
-* Dayhoff-170m-BRu
-* Dayhoff-170m-BRq
-* Dayhoff-170m-BRn
+### 170M parameter models
+* **Dayhoff-170m-UR50**: A 170M parameter model trained on UniRef50 cluster representatives
+* **Dayhoff-170m-UR90**: A 170M parameter model trained on members sampled from UniRef90 clusters
+* **Dayhoff-170m-GR** : A 170M parameter model trained on members sampled from GigaRef clusters
+* **Dayhoff-170m-BRu**: A 170M parameter model trained on UniRef50 cluster representatives and samples from unfiltered BackboneRef
+* **Dayhoff-170m-BRq**: A 170M parameter model trained on UniRef50 cluter representatives and samples from quality-filtered BackboneRef
+* **Dayhoff-170m-BRn**: A 170M parameter model trained on UniRef50 cluter representatives and samples from novelty-filtered BackboneRef
 
-**3b-parameter models**:
-* Dayhoff-3b-UR90
-* Dayhoff-3b-GR-HM
-* Dayhoff-3b-GR-HM-c
+### 3B parameter models
+* **Dayhoff-3b-UR90**: A 3B parameter model trained on members sampled from UniRef90 clusters
+* **Dayhoff-3b-GR-HM**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet
+* **Dayhoff-3b-GR-HM-c**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet and subsequently cooled using samples from UniRef90 clusters and homologs from OpenProteinSet. 
 
 
 ## Unconditional generation
@@ -178,7 +185,7 @@ python src/generate_from_homologs.py --model 3b-GGR-MSA --msas-dir MSAs --task s
 
 ## Analysis scripts
 
-The following list briefly describes the functionality of the most important scripts used to produce the results of the paper:
+The following scipts were used to conduct analyses described in the paper.
 
 Generation: 
 * [generate.py](https://github.com/microsoft/dayhoff/blob/main/analysis/generate.py)
@@ -238,6 +245,17 @@ Cas9 evals:
 * [generate_cas9.py](https://github.com/microsoft/dayhoff/blob/main/analysis/generate_cas9.py): 
 * [compile_cas9_fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_cas9_fidelity.py): 
 
+## Out-of-Scope Use Cases
+
+This model should not be used to generate anything that is not a protein sequence or a set of homologuous protein sequences. It is not meant for natural language or other biological sequences, such as DNA sequences.
+
+## Responsible AI Considerations
+
+The intended use of this model is to generate high-quality, realistic, protein sequences or sets of homologous protein sequences. Generations can be designed from scratch or conditioned on partial sequences in both N→C and C→N directions.
+
+Risks and limitations: Not all sequences are guaranteed to be realistic. It remains difficult to generate high-quality sequences with no sequence homology to any natural sequence.
+
+The code and datasets released in this repository are provided for research and development use only. They are not intended for use in clinical decision-making or for any other clinical use, and the performance of these models for clinical use has not been established. You bear sole responsibility for any use of these models, data and software, including incorporation into any product intended for clinical use.
 
 ## Contributing
 
@@ -255,11 +273,7 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 ## Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow 
 [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
 Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
 Any use of third-party trademarks or logos are subject to those third-party's policies.
-
-## Intended use
-The [software/model] described in this repository is provided for research and development use only. The [software/model] is not intended for use in clinical decision-making or for any other clinical use, and the performance of model for clinical use has not been established. You bear sole responsibility for any use of this [software/model], including incorporation into any product intended for clinical use. 
