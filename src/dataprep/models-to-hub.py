@@ -1,23 +1,24 @@
 import argparse
 import os
 import shutil
-from sequence_models.utils import transformer_lr
+
 import torch
 import torch.distributed as dist
-from torch.optim import Adam
-from torch.optim.lr_scheduler import LambdaLR
-from dayhoff.utils import seed_everything, load_msa_config_and_model, load_checkpoint, HF_MODEL_CARD_TEMPLATE
-from dayhoff import logger
 from dotenv import load_dotenv
-from huggingface_hub import login, ModelCard
-from huggingface_hub import HfApi
-from dayhoff.tokenizers import ProteinTokenizer
+from huggingface_hub import HfApi, ModelCard, login
 
+from dayhoff import logger
+from dayhoff.tokenizers import ProteinTokenizer
+from dayhoff.utils import (
+    HF_MODEL_CARD_TEMPLATE,
+    load_checkpoint,
+    load_msa_config_and_model,
+    seed_everything,
+)
 
 # Load environment variables
 load_dotenv()
 login(token=os.getenv("HF_TOKEN"))
-
 
 # Set rank and world size environment variables
 os.environ["RANK"] = os.environ.get("RANK", "0")
@@ -50,8 +51,6 @@ def push_to_hub(args: argparse.Namespace) -> None:
     tokenizer = ProteinTokenizer()
     tokenizer.save_pretrained(args.out_dir)
     
-    
-    
     for model_variant in args.variants:
         in_dir = os.path.join(args.checkpoints_dir, model_variant)
         out_variant_dir = os.path.join(args.out_dir, model_variant)
@@ -61,9 +60,7 @@ def push_to_hub(args: argparse.Namespace) -> None:
             continue
 
         #TODO: could add code block to download checkpoint from storage
-
         #Load model checkpoint and tokenizer
-        
         config, _, model, _ = load_msa_config_and_model(os.path.join(in_dir, "config.json"))
         _ = load_checkpoint(
         model, None, None, in_dir, args.checkpoint_step, rank=RANK
@@ -71,18 +68,12 @@ def push_to_hub(args: argparse.Namespace) -> None:
         
         model = model.module # Remove ARDiffusionModel wrapper
         model = model.to(DEVICE)
-
         
         # Save model and tokenizer for each variant in a separate local folder
         model.save_pretrained(out_variant_dir)
-        
-
-        
-        
+            
     ## UPLOAD TO HUGGING FACE ##
     logger.info(f"Pusing to Hugging Face repo: {args.repo_id}")
-
-
 
     # Check if repo already exists
     repo_exists = api.repo_exists(repo_id=args.repo_id, repo_type="model")
@@ -107,7 +98,6 @@ def push_to_hub(args: argparse.Namespace) -> None:
     else:
         raise ValueError("repo_mode must be one of 'create', 'replace', or 'append'")
 
-    
     # Create model card
     card = ModelCard(
         HF_MODEL_CARD_TEMPLATE.format(

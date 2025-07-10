@@ -11,15 +11,17 @@ requires-python = ">=3.10.16"
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
 authors = [
-    { name = "Sarah A. Alamdari"},
-    { name = "Neil Tenenholtz"},
-    { name = "Samir Char"},
-    { name = "Kaeli Kaymak-Loveless"},
+    { name = "Kevin K. Yang", email = "kevyan@microsoft.com"},
+    { name = "Sarah A. Alamdari", email = "salamdari@microsoft.com"},
     { name = "Alex J. Lee"},
+    { name = "Kaeli Kaymak-Loveless"},
+    { name = "Samir Char"},
     { name = "Garyk Brixi"},
     { name = "Carles Domingo-Enrich"},
+    { name = "Chentong Wang"},
+    { name = "Suyue Lyu"},
     { name = "Nicolo Fusi"},
-    { name = "Kevin K. Yang", email = "kevyan@microsoft.com"},
+    { name = "Neil Tenenholtz", email = "netenenh@microsoft.com"},    
     { name = "Ava P. Amini", email = "ava.amini@microsoft.com"}
 ]
 

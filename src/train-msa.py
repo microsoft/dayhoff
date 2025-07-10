@@ -3,43 +3,47 @@ import datetime
 import functools
 import json
 import os
-from typing import Tuple
 import time
+from typing import Tuple
 
 import numpy as np
-from sequence_models.samplers import SortishSampler, ClusteredSortishSampler, ApproxBatchSampler
-from sequence_models.utils import transformer_lr
 import torch
-import torch.nn as nn
 import torch.distributed as dist
+import torch.nn as nn
+import wandb
+from sequence_models.samplers import (
+    ApproxBatchSampler,
+    ClusteredSortishSampler,
+    SortishSampler,
+)
+from sequence_models.utils import transformer_lr
 from torch.distributed.fsdp import (
     BackwardPrefetch,
-    FullyShardedDataParallel as FSDP,
+    MixedPrecision,
     ShardedOptimStateDictConfig,
     ShardedStateDictConfig,
-    StateDictType,
-    MixedPrecision,
     ShardingStrategy,
+    StateDictType,
+)
+from torch.distributed.fsdp import (
+    FullyShardedDataParallel as FSDP,
 )
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
 from torch.optim import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
-import torch.distributed as dist
-from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
-import torch.distributed.checkpoint as dcp
-import wandb
-
 
 from dayhoff.activation_checkpointing import apply_activation_checkpointing
 from dayhoff.collators import MSAARCollator
 from dayhoff.datasets import OpenProteinDataset, UniRefDataset
 from dayhoff.samplers import ApproxBatchSamplerMSA
-from dayhoff.utils import (cosine_anneal_with_warmup, load_msa_config_and_model,
-                           get_latest_dcp_checkpoint_path, seed_everything, load_checkpoint, save_checkpoint)
-
-
-
+from dayhoff.utils import (
+    cosine_anneal_with_warmup,
+    load_checkpoint,
+    load_msa_config_and_model,
+    save_checkpoint,
+    seed_everything,
+)
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
@@ -47,8 +51,6 @@ LOCAL_RANK = int(os.environ["LOCAL_RANK"])
 WORLD_SIZE = int(os.environ["WORLD_SIZE"])
 DEVICE = torch.device(f"cuda:{LOCAL_RANK}")
 OTHER_METRICS_KEY = "other_metrics"
-
-
 
 
 def is_amlt():
@@ -210,9 +212,7 @@ def get_msa_dataloader(config, tokenizer, args):
         num_workers=num_workers,
         pin_memory=False,
     )
-
     return dl_train
-
 
 
 def epoch(

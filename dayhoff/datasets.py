@@ -1,12 +1,12 @@
 import json
-import numpy as np
 import os
 import os.path as osp
+
+import numpy as np
 import pandas as pd
-from random import shuffle
-from scipy.spatial.distance import hamming, cdist
+from scipy.spatial.distance import cdist
+from sequence_models.constants import GAP, MSA_ALPHABET, START, STOP
 from sequence_models.utils import parse_fasta
-from sequence_models.constants import MSA_ALPHABET, GAP, START, STOP
 from torch.utils.data import Dataset
 
 
@@ -324,26 +324,3 @@ class OpenProteinDataset(Dataset):
             homologs = ["".join(self.i_to_a[list(seq)]) for seq in msa_sequences]
             anchor_seq = "".join(self.i_to_a[sliced_msa[0]])  # query seq
         return anchor_seq, homologs
-
-
-# from dayhoff.datasets import OpenProteinDataset
-# ds = OpenProteinDataset('/data/t-garykbrixi/sample_msa/', 'test', 'max_hamming', 64, 512, indel_frac=0.5, no_query_frac=0.5)
-# # ds.is_amlt = False
-# # p = ['107542481', '5079430', '96376627']
-# # p = ['/data/t-garykbrixi/sample_msa/' + pp + '/uniclust30.a3m' for pp in p]
-# # ds.filenames = p
-# ds.filenames = ['uniclust30.a3m']
-# ds.lengths = [566]
-# ds.depths = [2775]
-# ds[0]
-
-# from dayhoff.datasets import OpenProteinDataset
-# from tqdm import tqdm
-#
-# ds = OpenProteinDataset('/data/openfold/', 'train', 'max_hamming', 64, 512, indel_frac=0.5, no_query_frac=0.5)
-#
-# for i in tqdm(range(len(ds))):
-#     try:
-#         x = ds[i]
-#     except:
-#         print(ds.filenames[i])

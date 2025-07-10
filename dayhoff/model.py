@@ -1,16 +1,16 @@
 from typing import Dict, Optional, Set, Tuple, Type
 
 import numpy as np
-from sequence_models.constants import MSA_PAD, START, STOP
-from sequence_models.convolutional import ByteNetBlock, ByteNetLM
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoModelForCausalLM, AutoConfig, PreTrainedModel
+from huggingface_hub import PyTorchModelHubMixin
+from sequence_models.constants import MSA_PAD, START, STOP
+from sequence_models.convolutional import ByteNetBlock, ByteNetLM
+from transformers import AutoConfig, AutoModelForCausalLM, PreTrainedModel
 
 from dayhoff.constants import UL_ALPHABET_PLUS, TaskType
 from dayhoff.losses import OAMaskedCrossEntropyLoss
-from huggingface_hub import PyTorchModelHubMixin
 
 OTHER_METRICS_KEY = "other_metrics"
 

@@ -3,38 +3,39 @@ import functools
 import json
 import os
 import random
-from typing import Optional, Sequence, Tuple, Type
+from typing import Optional, Tuple
 
-from esm.modules import AxialTransformerLayer
-from evodiff.utils import Tokenizer
-from evodiff.metrics import MaskedAccuracyMSA
 import numpy as np
 import pandas as pd
-from sequence_models.esm import MSATransformer
-from sequence_models.losses import MaskedCrossEntropyLossMSA
-from sequence_models.utils import warmup, transformer_lr
 import torch
 import torch.distributed as dist
+import torch.distributed.checkpoint as dcp
+import torch.nn as nn
+import wandb
+from esm.modules import AxialTransformerLayer
+from sequence_models.esm import MSATransformer
+from sequence_models.losses import MaskedCrossEntropyLossMSA
+from sequence_models.utils import transformer_lr
 from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
 from torch.distributed.fsdp import (
     BackwardPrefetch,
-    FullyShardedDataParallel as FSDP,
     MixedPrecision,
     ShardingStrategy,
 )
-import torch.distributed.checkpoint as dcp
+from torch.distributed.fsdp import (
+    FullyShardedDataParallel as FSDP,
+)
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
-import torch.nn as nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader
-import wandb
 
-from dayhoff.collators import MSAOAMaskCollator, MSAARCollator
+from dayhoff.collators import MSAARCollator, MSAOAMaskCollator
 from dayhoff.constants import MSA_ALPHABET_PLUS
 from dayhoff.datasets import OpenProteinDataset, UniRefDataset
-from dayhoff.model import MSAModelWithMetrics, OTHER_METRICS_KEY, _get_hf_model
-
+from dayhoff.model import OTHER_METRICS_KEY, MSAModelWithMetrics, _get_hf_model
+from evodiff.metrics import MaskedAccuracyMSA
+from evodiff.utils import Tokenizer
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
@@ -228,19 +229,19 @@ def load_checkpoint(
     if ckpt_path:
         print(f"Loading weights from {ckpt_path}...", flush=True)
         fs_storage_reader = torch.distributed.checkpoint.FileSystemReader(ckpt_path)
-        print(f"finished fs")
+        print("finished fs")
         model_state_dict, optimizer_state_dict = get_state_dict(model, optimizer)
         print("finish getting state dict")
         state_dict = {
             "model_state_dict": model_state_dict,
             "optimizer_state_dict": optimizer_state_dict,
         }
-        print(f"finished state_dict")
+        print("finished state_dict")
         dcp.load(
             state_dict=state_dict,
             storage_reader=fs_storage_reader,
         )
-        print(f"finished dcp_load")
+        print("finished dcp_load")
         # sets our state dicts on the model and optimizer, now that we've loaded
         set_state_dict(
             model,
@@ -248,12 +249,12 @@ def load_checkpoint(
             model_state_dict=model_state_dict,
             optim_state_dict=optimizer_state_dict,
         )
-        print(f"finished set_state_dict")
+        print("finished set_state_dict")
         sd = torch.load(
             os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
         )
         scheduler.load_state_dict(sd["scheduler_state_dict"])
-        print(f"finished sd/scheudler")
+        print("finished sd/scheudler")
         # sequences must optionally return 0 for backwards compatibility with old checkpoints
         return sd["epoch"] + 1, sd["step"], sd["tokens"], sd.get("sequences", 0)
     else:

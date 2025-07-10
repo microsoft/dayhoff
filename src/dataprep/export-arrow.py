@@ -1,21 +1,18 @@
-import os.path as osp
+import argparse
+import json
 import os
-import shutil
-from datasets import disable_caching
+import os.path as osp
+from glob import has_magic
+from multiprocessing import cpu_count
+from typing import Literal
+
+import ijson
+from datasets import Dataset, DatasetDict, disable_caching, load_from_disk
+
 disable_caching()
 is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
 
 
-import argparse
-from glob import glob, has_magic
-import pyfastx
-import json
-from datasets import Dataset, DatasetDict, is_caching_enabled, load_from_disk
-from typing import Literal
-from multiprocessing import cpu_count
-import ijson
-from dotenv import load_dotenv
- 
 def json_generator(json_path, key):
     with open(json_path,'r') as f: 
         for record in ijson.items(f,f"{key}.item"):

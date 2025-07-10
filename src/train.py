@@ -7,43 +7,42 @@ import random
 from typing import Optional, Sequence, Tuple, Type
 
 import numpy as np
-import wandb
-
 import torch
 import torch.distributed as dist
 import torch.distributed.checkpoint as dcp
+import torch.nn as nn
+import wandb
+from sequence_models.samplers import (
+    ApproxBatchSampler,
+    ClusteredSortishSampler,
+    SortishSampler,
+)
+from sequence_models.utils import transformer_lr
 from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
 from torch.distributed.fsdp import (
     BackwardPrefetch,
-    FullyShardedDataParallel as FSDP,
     MixedPrecision,
     ShardingStrategy,
 )
+from torch.distributed.fsdp import (
+    FullyShardedDataParallel as FSDP,
+)
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
-import torch.nn as nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import LambdaLR
 from torch.utils.data import DataLoader, Subset
 
-from sequence_models.samplers import (
-    SortishSampler,
-    ApproxBatchSampler,
-    ClusteredSortishSampler,
-)
-from sequence_models.utils import transformer_lr
-
-from evodiff.utils import Tokenizer
 from dayhoff.activation_checkpointing import apply_activation_checkpointing
 from dayhoff.collators import LMCollator, OAMaskCollator
 from dayhoff.constants import MSA_ALPHABET_PLUS, TaskType
 from dayhoff.datasets import UniRefDataset
 from dayhoff.model import (
+    OTHER_METRICS_KEY,
     ARDiffusionModel,
     OrderAgnosticDiffusionModel,
-    OTHER_METRICS_KEY,
+    create_model,
 )
-from dayhoff.model import create_model
-
+from evodiff.utils import Tokenizer
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
@@ -301,7 +300,6 @@ def epoch(
                 tokens=total_tokens,
                 sequences=total_seq,
             )
-
     return total_steps, total_tokens, total_seq
 
 

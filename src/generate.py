@@ -1,7 +1,8 @@
-import torch
-import os
-from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 import argparse
+import os
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate text using a pre-trained model.")
@@ -17,7 +18,6 @@ if __name__ == "__main__":
     parser.add_argument("--no-fa2", action="store_true",help="Disable FlashAttention 2")
     args = parser.parse_args()
     
-
     set_seed(args.random_seed)
     torch.set_default_device("cuda:%d" %args.device)
 

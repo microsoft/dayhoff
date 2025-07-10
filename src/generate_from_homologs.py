@@ -1,16 +1,20 @@
 import argparse
 import os
-from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
-from transformers import SuppressTokensLogitsProcessor
-import torch
-from sequence_models.constants import CAN_AAS, SEP, GAP
-from dayhoff.constants import UL_ALPHABET_PLUS, START_AL, START_UL
-from dayhoff.utils import seed_everything
-from sequence_models.utils import parse_fasta
 from glob import glob
 
+import torch
+from sequence_models.constants import CAN_AAS, GAP, SEP
+from sequence_models.utils import parse_fasta
+from tqdm import tqdm
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    SuppressTokensLogitsProcessor,
+    set_seed,
+)
 
+from dayhoff.constants import START_AL, START_UL, UL_ALPHABET_PLUS
+from dayhoff.utils import seed_everything
 
 
 def generate(args: argparse.Namespace) -> None:

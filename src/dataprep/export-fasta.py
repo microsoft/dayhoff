@@ -1,20 +1,24 @@
-import os.path as osp
-import os
-is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
 import argparse
-from glob import glob, has_magic
-import pyfastx
 import json
-from datasets import Dataset, DatasetDict, disable_caching, is_caching_enabled
-from typing import Literal
+import os
+import os.path as osp
+from glob import glob, has_magic
 from multiprocessing import cpu_count
+from typing import Literal
+
 import ijson
+import pyfastx
+from datasets import Dataset, DatasetDict, disable_caching, is_caching_enabled
+
+is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
+
 
 def json_generator(json_path, key):
     with open(json_path,'r') as f: 
         for record in ijson.items(f,f"{key}.item"):
             yield  {"ids":record}
-            
+
+
 def parse_pyfastx_generator(fasta_fpath):
     fasta = pyfastx.Fastx(fasta_fpath,comment=True) # Fasta fasta parser written in C
     idx = 0
@@ -34,6 +38,7 @@ def make_dset_from_ids(ids_dataset: Dataset, seq_dset: Dataset, num_proc: int = 
     return ids_dataset.map(lambda x: seq_dset[x["ids"]],
                       remove_columns="ids",
                       num_proc=num_proc)
+ 
  
 def create_hf_dataset(fasta_path: str,
                       splits_path: str,

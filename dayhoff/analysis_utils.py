@@ -1,8 +1,9 @@
-from Bio.PDB import PDBParser
-import numpy as np
 import os
-import pandas as pd
 import subprocess
+
+import numpy as np
+import pandas as pd
+from Bio.PDB import PDBParser
 
 
 def get_all_paths(pdb_path, mpnn_path):

@@ -1,18 +1,22 @@
-import os.path as osp
-import os
-is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
 import argparse
-import pyfastx
 import json
-from datasets import Dataset, DatasetDict, is_caching_enabled
-from typing import Literal
+import os
+import os.path as osp
 from multiprocessing import cpu_count
+from typing import Literal
+
 import ijson
+import pyfastx
+from datasets import Dataset, DatasetDict, is_caching_enabled
+
+is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
+
 
 def json_generator(json_path, key):
     with open(json_path,'r') as f: 
         for record in ijson.items(f,f"{key}.item"):
             yield  {"ids":record}
+            
             
 def parse_pyfastx_generator(fasta_fpath):
     fasta = pyfastx.Fastx(fasta_fpath,comment=True) # Fasta fasta parser written in C
@@ -25,9 +29,6 @@ def parse_pyfastx_generator(fasta_fpath):
             "description": description
         }
         idx += 1
-        # Temporarily generate only first 1000 sequences
-        # if idx == 10_000_000: #TODO: remove this line
-        #     break
  
  
 def make_dset_from_ids(ids_dataset: Dataset, seq_dset: Dataset, num_proc: int = cpu_count()) -> Dataset:
