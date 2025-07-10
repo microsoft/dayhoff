@@ -105,5 +105,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-model = load_model(checkpoint, model_class=MambaLMHeadModelwithPosids, device=device, dtype=torch.bfloat16)
