@@ -28,7 +28,6 @@ If you use the code, data, models, or results. please cite our [preprint](aka.ms
 * [Responsible AI](#responsible-ai-considerations)
 * [Contributing](#Contributing)
 * [Trademarks](#Trademarks)
-* [Intended use](#Intended-use)
 
 
 ## Installation
