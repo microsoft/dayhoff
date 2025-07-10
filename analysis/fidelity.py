@@ -2,16 +2,15 @@ import argparse
 import os
 import subprocess
 
-from Bio.PDB import PDBParser
 import numpy as np
 import pandas as pd
-from sequence_models.utils import parse_fasta
 import torch
-
-from transformers.models.esm.openfold_utils.protein import to_pdb, Protein as OFProtein
-from transformers.models.esm.openfold_utils.feats import atom14_to_atom37
+from Bio.PDB import PDBParser
+from sequence_models.utils import parse_fasta
 from transformers import AutoTokenizer, EsmForProteinFolding
-
+from transformers.models.esm.openfold_utils.feats import atom14_to_atom37
+from transformers.models.esm.openfold_utils.protein import Protein as OFProtein
+from transformers.models.esm.openfold_utils.protein import to_pdb
 
 PATH_TO_PROTEINMPNN = "ProteinMPNN/"
 CWD = os.getcwd()
@@ -52,6 +51,7 @@ def run_omegafold(input_fasta, output_dir, subbatch_size=1024):
             ],check=True
         )
 
+
 def convert_outputs_to_pdb(outputs):
     final_atom_positions = atom14_to_atom37(outputs["positions"][-1], outputs)
     outputs = {k: v.to("cpu").numpy() for k, v in outputs.items()}
@@ -75,8 +75,8 @@ def convert_outputs_to_pdb(outputs):
     return pdbs
 
 
-def parse_fasta_bad_kevin(fasta_fpath, return_names=False):
-    """ Parse fasta when kevin forgot to add ">" to comment lines"""
+def parse_fasta_missing_caret(fasta_fpath, return_names=False):
+    """ Parse fasta when missing ">" in comment lines"""
     seqs = []
     with open(fasta_fpath) as f_in:
         current = ''
@@ -179,13 +179,13 @@ def run_esmfold(input_fasta: str,
                 num_recycles: int = None, # num_recycles = None means max num_recycles
                 esm_chunk_size: int = 64,
                 short_or_long: str = 'short',
-                bad_kevin: bool = False):
+                missing_caret: bool = False):
     
     #    raise FileNotFoundError(f"Input fasta file {input_fasta} not found.")
 
     # Parse fasta
-    if bad_kevin:
-        seqs, seq_names = parse_fasta_bad_kevin(input_fasta, return_names=True)
+    if missing_caret:
+        seqs, seq_names = parse_fasta_missing_caret(input_fasta, return_names=True)
     else:
         seqs, seq_names = parse_fasta(input_fasta, return_names=True)
     seq_ids = [seq_name.split()[0] for seq_name in seq_names] # In case record contains annotations, just keep sequence ID.
@@ -331,7 +331,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-fasta", type=str, default='generated/queries.fasta') # use queries.fasta for MSA runs
     parser.add_argument("--csv", action="store_true") # Use CSV input instead of fasta
-    parser.add_argument("--bad-kevin", action="store_true") # TODO clean up later ; fastas where kevin forgot to save > headers
     parser.add_argument("--output-path", type=str, default='generated/')  # where to save results
     parser.add_argument("--msa", action="store_true")  # will extract queries
     parser.add_argument("--fold-method", type=str, default='omegafold')
@@ -340,9 +339,11 @@ def main():
     parser.add_argument("--esmfold-num-recycles", type=int, default=None)
     parser.add_argument("--esmfold-chunk-size", type=int, default=32)
     parser.add_argument("--esmfold-filter-seqs", action="store_true")
+    parser.add_argument("--missing-caret", action="store_true") # Fastas where we forgot ">" in headers
     parser.add_argument("--short-or-long", type=str, default='all') # short < 800, long >= 800 for running on <40GB gpu, `all` dont filter
     parser.add_argument("--skip-folding", action="store_true") # TODO clean up later
     parser.add_argument("--skip-if", action="store_true")  # bypass running if/folding
+    
 
     args = parser.parse_args()
     
@@ -382,7 +383,7 @@ def main():
                         num_recycles=args.esmfold_num_recycles,
                         esm_chunk_size=args.esmfold_chunk_size,
                         short_or_long=args.short_or_long,
-                        bad_kevin=args.bad_kevin)
+                        missing_caret=args.missing_caret)
 
         elif args.fold_method == "omegafold":
             if not os.listdir(pdb_path):

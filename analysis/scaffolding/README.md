@@ -1,13 +1,37 @@
 # Scaffold Generation Protocol
-This document outlines the protocol for generating protein scaffolds with Dayhoff and EvoDiff
+This document outlines the protocol for generating protein scaffolds with Dayhoff and EvoDiff. These scripts and protocol are adapted from the approach introduced in [MotifBench](https://github.com/blt2114/MotifBench), refer to this repository for setup and additional details. 
 
-## Overview
+### Structure 
+This code has been tested on two predefined sets of scaffolding problems:
 
-The scaffolding protocol enables the generation of protein sequences that incorporate pre-defined motifs or functional elements. By using EvoDiff's diffusion models, we can generate novel protein sequences that maintain the structural and functional properties of input motifs while exploring sequence space for the surrounding regions.
+1. `RF_PROBLEMS`: RFdiffusion benchmark problems
+2. `MOTIFBENCH_PROBLEMS`: MotifBench problems
 
-## Scaffolding Protocol
+Each problem set is represented by a CSV file `motifbench.csv` or `rfdiff.csv`
+
+Each problem is represented by a JSON file in the motif directory.
+
+For reproducibility we reccoment to use the following file structure
+
+```
+scaffolding/
+├── motifbench.csv
+├── rfdiff.csv 
+├── {model}/ # (output of {model}_generate_scaffolds.py)
+    ├── fasta/ # sequences extracted for each PDB
+    ├── motif/ # motif information extracted for each PDB in sequence space
+    ├── pdb/ # downloaded PDBs 
+    ├── results/ # generated sequences for each problem 
+```
+
+The scripts support:
+1. Single motif placement with random positioning
+2. Multiple motifs with specified spacing
+3. Adaptive spacing when scaffold length constraints require it
 
 ### 1. Prepare Motif Specifications
+
+Use `extract_motif_sequences.py` to download PDB files, and extract sequence information for each PDB and each scaffolding problem. 
 
 Motifs are defined in JSON format with the following structure:
 - Chain ID
@@ -29,31 +53,28 @@ Where:
 
 ### 2. Generate Scaffolds
 
-Use `evodifff_generate_scaffolds.py`, which:
+Use `dayhoff_generate_scaffolds.py` or `evodifff_generate_scaffolds.py`, which:
 1. Loads motif specifications from JSON files
-2. Generates scaffolds using the EvoDiff diffusion model
+2. Generates scaffolds using the denoted model
 3. Saves generated sequences and related information
 
-Run the script with:
+Run the scripts with:
+
+```bash
+python dayhoff_generate_scaffolds.py\
+    path/to/checkpoint/dir /
+    motif_dir/ #path to json files containing problems /
+    out_fpath #output dir 
+```
 
 ```bash
 python evodifff_generate_scaffolds.py \
     --output-dir scaffolding/ \
     --problem-set motifbench \
-    --num-generations 100 \
-    --gpu-id 0
 ```
 
-Key parameters:
-- `--output-dir`: Base directory for input/output files
-- `--problem-set`: Choose from predefined problem sets (`motifbench`, `rfdiff`) or specify a single problem
-- `--num-generations`: Number of scaffold sequences to generate per motif specification
-- `--gpu-id`: GPU device to use
-- `--overwrite`: Optional flag to overwrite existing outputs
-- `--verbose`: Optional flag for detailed logging
 
-
-### 3. Output Files
+#### Output Files
 
 The script produces:
 - FASTA files with generated scaffold sequences
@@ -65,65 +86,15 @@ The CSV files contain:
 - `sample_num`: Sequence identifier
 - `motif_placements`: Contig string describing motif placements in format: `{prefix_length}/A/{segment1_length}/B/{suffix_length}`
 
-## Key Components
 
-### Problem Sets
-
-Two predefined sets of scaffolding problems:
-1. `RF_PROBLEMS`: RFdiffusion benchmark problems
-2. `MOTIFBENCH_PROBLEMS`: MotifBench problems
-
-Each problem is represented by a JSON file in the motif directory.
-
-### EvoDiff Model
-
-The script uses the pretrained OA_DM_640M model:
-```python
-checkpoint = OA_DM_640M()
-model, collater, tokenizer, scheme = checkpoint
-```
-
-This model implements the diffusion-based sequence generation process.
-
-### Motif Placement
-
-The script supports:
-1. Single motif placement with random positioning
-2. Multiple motifs with specified spacing
-3. Adaptive spacing when scaffold length constraints require it
-
-## Advanced Usage
-
-### Custom Problem Specification
-
-To run with a custom motif specification:
-1. Create a JSON file following the format described above
-2. Place it in the appropriate motif directory
-3. Run the script with `--problem-set {your_file_name_without_json_extension}`
-
-### Length Control
-
-The script handles both fixed and variable-length scaffolds:
-- Fixed length: Specify a single integer as `"scaffold_length": 100`
-- Length range: Specify a range as `"scaffold_length": "100-150"`
-
-For length ranges, each generated sequence will have a randomly selected length within the range.
+## Additional Scripts
+`fidelity.py` runs folding with esmfold and inverse folding with proteinMPNN \
+`foldseek_analysis.py` performs a structure-based clustering search on structures predicted from generated sequences \
+`rmsd_analysis.py` runs motifRMSD analysis on structures predicted from generated sequences \
+`run_homology.sh` runs a homology search using `blastp` from command line over successful scaffolds
 
 ## Notes and Limitations
 
 - The current implementation primarily focuses on preserving the sequence of motifs rather than their 3D structure
 - For structure-preserving scaffolding, additional structure prediction and evaluation steps may be required
 - When motif specifications would result in sequences longer than the target scaffold length, the script will adaptively reduce spacing between motifs
-
-## Related Resources
-
-For structure prediction and evaluation of scaffolds:
-- The `Scaffold-Lab` directory contains tools for scaffold evaluation
-- The `foldseek` directory provides tools for structural comparison
-- The `MotifBench` directory includes benchmark datasets for scaffold evaluation
-
-## Additional Scripts
-
-For more complex scaffolding workflows:
-- See the `evodiff/examples/` directory for additional examples and notebooks
-- Check `amlt/scaffolding.yaml` and `amlt/scaffolding_folding.yaml` for batch processing configurations

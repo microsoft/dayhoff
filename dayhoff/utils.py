@@ -2,7 +2,7 @@ import json
 import os
 import random
 from typing import Optional, Tuple
-
+import logging
 import numpy as np
 import torch
 from torch.distributed.checkpoint.state_dict import (get_state_dict, set_state_dict,
@@ -15,6 +15,7 @@ from dayhoff.model import _get_hf_model, ARDiffusionModel
 from dayhoff.constants import UL_ALPHABET_PLUS
 
 
+
 def cosine_anneal_with_warmup(n_warmup_steps, n_anneal_steps, final_ratio=0.0):
     # Linear warmup, then anneal from max lr to 0 over n_anneal_steps
     def get_lr(step):
@@ -24,7 +25,6 @@ def cosine_anneal_with_warmup(n_warmup_steps, n_anneal_steps, final_ratio=0.0):
         else:
             return final_ratio + 0.5 * (1 - final_ratio) * (1 + np.cos((step - n_warmup_steps) * np.pi / n_anneal_steps))
     return get_lr
-
 
 def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Optional[str]:
     ckpt_path = None
@@ -40,7 +40,7 @@ def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Option
     return ckpt_path
 
 
-def load_msa_config_and_model(config_fpath, alphabet=UL_ALPHABET_PLUS, use_flash_attention_2=True):
+def load_msa_config_and_model(config_fpath, alphabet=UL_ALPHABET_PLUS, use_flash_attention_2=False):
     with open(config_fpath, "r") as f:
         config = json.load(f)
 
@@ -149,11 +149,11 @@ def load_checkpoint(
             )
         if os.path.exists(os.path.join(ckpt_path, "scheduler%d.pt" %rank)):
             sd = torch.load(
-                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu"), weights_only=False
+                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu"),
             )
         elif os.path.exists(os.path.join(ckpt_path, "scheduler.pt")):
             sd = torch.load(
-                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
+                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu"),
             )
         else:
             return 0, 0, 0, 0, 0
@@ -171,3 +171,117 @@ def load_checkpoint(
         return epoch, sd["step"], sd["tokens"], sd["sequences"], its
     else:
         return 0, 0, 0, 0, 0
+
+def get_logger():
+    # Create a custom logger
+    logger = logging.getLogger(__name__)
+
+    # Set the logging level to INFO
+    logger.setLevel(logging.INFO)
+
+    # Create a console handler and set its level to INFO
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+
+    # Create a formatter that includes the current date and time
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    # Set the formatter for the console handler
+    console_handler.setFormatter(formatter)
+
+    # Add the console handler to the logger
+    logger.addHandler(console_handler)
+
+    # Example usage
+    logger.info("This is an info message.")
+    return logger
+
+
+
+HF_MODEL_CARD_TEMPLATE = '''
+# Model Card for Dayhoff
+
+
+## Model Details
+
+### Model Description
+
+<ADD INFO>
+
+- **Developed by:** <ADD INFO>
+- **Model type:** <ADD INFO>
+- **License:** <ADD INFO>
+
+### Model Sources
+
+- **Repository:** https://github.com/microsoft/dayhoff
+
+## Uses
+
+### Sample Sequence Generation Code
+
+```py
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
+
+set_seed(0)
+torch.set_default_device("cuda")
+
+model = AutoModelForCausalLM.from_pretrained('{repo_id}', subfolder = "jamba-170m-seqsam-36w")
+tokenizer = AutoTokenizer.from_pretrained('{repo_id}', trust_remote_code=True)
+
+
+inputs = tokenizer(tokenizer.bos_token, return_tensors="pt", return_token_type_ids=False)
+
+outputs = model.generate(inputs['input_ids'],max_length=50,do_sample=True)
+sequence = tokenizer.batch_decode(outputs,skip_special_tokens=True)
+print(sequence)
+```
+
+### Downstream Use
+
+<ADD INFO>
+
+## Bias, Risks, and Limitations
+
+<ADD INFO>
+
+## How to Get Started with the Model
+
+<ADD INFO>
+
+For detailed instructions on package usage, please refer to the README in model repo
+
+## Evaluation
+
+### Results
+
+<ADD INFO>
+
+
+## Technical Specifications 
+
+### Compute Infrastructure
+
+<ADD INFO>
+
+
+## Citation
+
+**BibTeX:**
+If you use this model in your work, I would greatly appreciate it if you could cite it as follows:
+
+<ADD INFO>
+
+
+## Model Card Authors
+
+<ADD INFO>
+
+## Model Card Contact
+
+<ADD INFO>
+'''

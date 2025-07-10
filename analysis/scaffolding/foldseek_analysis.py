@@ -24,6 +24,7 @@ def mmseqs_seq_based_clustering(input_path, scaffold_dir, problem_set, model, id
         output_tsv_prefix,
         tmp_dir], check=True)
 
+
 def fallback_cluster(input_dir, output_tsv_prefix, tmscore_threshold):
     """
     Cluster all .pdbs in input_dir by pairwise TM-score >= threshold.
@@ -84,10 +85,10 @@ def fallback_cluster(input_dir, output_tsv_prefix, tmscore_threshold):
                 mem_name = os.path.basename(pdb_files[mi])
                 fw.write(f"{rep_name}\t{mem_name}\n")
 
+
 def run_foldseek(input_path, model, pdb_index, pdb_name,
                  alignment_type=1, tmscore_threshold=0.6, alignment_mode=2,
                  ):
-
     pdb_index += 1
     idx = f"{pdb_index:02d}"
     input_dir  = f"{input_path}/{model}/{idx}_{pdb_name}/"
