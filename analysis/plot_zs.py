@@ -84,7 +84,7 @@ dfs = []
 for model in model_names:
     for dms in dmss:
         for rank in range(world_size):
-            df_path = os.path.join(out_fpath, dms, model + '_{}.csv'.format(rank))
+            df_path = os.path.join(out_dir, dms, model + '_{}.csv'.format(rank))
             if os.path.exists(df_path):
                 df = pd.read_csv(df_path)
                 if 'seq_spearman' in df:

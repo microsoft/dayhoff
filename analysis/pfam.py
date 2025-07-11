@@ -203,21 +203,37 @@ scn_vector = np.array([scn_counter[d] for d in all_domains])
 un_vector = np.array([un_counter[d] for d in all_domains])
 input_dict = {
     "UniRef50": ur_vector,
-    "GGR": r_vector,
-    "GGR-singles": s_vector,
-    "BBR-sc": sc_vector,
-    "BBR-n": scn_vector,
-    "BBR-u": un_vector,
+    "GR": r_vector,
+    "GR-singles": s_vector,
+    "BRq": sc_vector,
+    "BRn": scn_vector,
+    "BRu": un_vector,
     "DayhoffRef": dr_vector,
 }
+np.savez_compressed(os.path.join(in_dir, "pfam_annotations", "counts.npz"), **input_dict)
+
+d = np.load(os.path.join(in_dir, "pfam_annotations", "counts.npz"), allow_pickle=True)
+
+# fixed = {
+# "UniRef50": d['UniRef50'],
+#     "GR": d['GGR'],
+#     "GR-singles": d['GGR-singles'],
+#     "BRq": d['BBR-sc'],
+#     "BRn": d['BBR-n'],
+#     "BRu": d['BBR-u'],
+#     "DayhoffRef": d['DayhoffRef'],
+# }
+
+input_dict = {k: d[k] for k in d.keys()}
 keys = list(input_dict.keys())
 for i, k1 in enumerate(keys):
     v1 = input_dict[k1]
+    sort_idx = v1.argsort()
     print(k1, v1.sum())
     for k2 in keys[i + 1:]:
         v2 = input_dict[k2]
         fig, ax = plt.subplots(1, 1)
-        _ = ax.plot(v1, v2, '.', alpha=0.3, color='gray')
+        _ = ax.plot(v1[sort_idx][::10], v2[sort_idx][::10], '.', alpha=0.3, color='gray')
         _ = ax.set_xlabel("Occurences in %s" %k1)
         _ = ax.set_ylabel("Occurences in %s" %k2)
         ax.xaxis.set_major_locator(ticker.MultipleLocator(10000))
