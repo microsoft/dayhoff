@@ -1,15 +1,17 @@
 import os
-from tqdm import tqdm
+
 import h5py
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from scipy import linalg
-import torch
-from sklearn import metrics
-import matplotlib.pyplot as plt
 import seaborn as sns
+import torch
+from scipy import linalg
+from sklearn import metrics
+from tqdm import tqdm
 
 sns.set_style('white')
+
 
 def mmd_rbf(X, Y, gamma=1.0):
     """MMD using rbf (gaussian) kernel (i.e., k(x,y) = exp(-gamma * ||x-y||^2 / 2))

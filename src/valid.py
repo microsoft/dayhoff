@@ -2,26 +2,31 @@ import argparse
 import functools
 import os
 from typing import Sequence, Tuple
+
+import pandas as pd
 import torch
 import torch.distributed as dist
+import torch.nn as nn
+import wandb
 from torch.distributed.fsdp import (
     BackwardPrefetch,
-    FullyShardedDataParallel as FSDP,
     MixedPrecision,
     ShardingStrategy,
 )
+from torch.distributed.fsdp import (
+    FullyShardedDataParallel as FSDP,
+)
 from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
-import torch.nn as nn
 from torch.utils.data import DataLoader
-import wandb
 
-import pandas as pd
 from dayhoff.collators import MSAARCollator
-from dayhoff.datasets import UniRefDataset, OpenProteinDataset
+from dayhoff.datasets import OpenProteinDataset, UniRefDataset
 from dayhoff.model import OTHER_METRICS_KEY
-from dayhoff.utils import (load_msa_config_and_model, seed_everything, load_checkpoint, get_latest_dcp_checkpoint_path)
-
-
+from dayhoff.utils import (
+    load_checkpoint,
+    load_msa_config_and_model,
+    seed_everything,
+)
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
@@ -77,7 +82,6 @@ def get_val_dataloader(config, tokenizer, args):
     )
 
     return dl
-
 
 
 def step(
@@ -237,8 +241,6 @@ def main():
     parser.add_argument("--msa", action="store_true")
     parser.add_argument("--indel", action="store_true")
     parser.add_argument("--gap", action="store_true")
-
-
 
     args = parser.parse_args()
     train(args)

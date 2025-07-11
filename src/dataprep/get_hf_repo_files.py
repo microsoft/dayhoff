@@ -1,12 +1,10 @@
-from huggingface_hub import list_repo_files, hf_hub_download
 import os
 import os.path as osp
-from dotenv import load_dotenv
-import argparse
-from tqdm import tqdm
 from glob import glob
-from huggingface_hub import HfApi, upload_large_folder,hf_hub_url,get_hf_file_metadata
 
+from dotenv import load_dotenv
+from huggingface_hub import get_hf_file_metadata, hf_hub_url, list_repo_files
+from tqdm import tqdm
 
 
 #number of files in local dir
@@ -25,10 +23,7 @@ for local_dir in local_dirs:
     # append the path
     local_file_names.extend([file.replace('/mnt/blob/dayhoff/data/','') for file in files if osp.isfile(file)])
 
-
 print("Number of files in local dir:", num_local_files)
-
-
 
 repo_id = "microsoft/DayhoffDataset"
 repo_type = "dataset"

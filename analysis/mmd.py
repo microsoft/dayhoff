@@ -1,18 +1,17 @@
-import torch
-import numpy as np
-import pandas as pd
-from torch.utils.data import Dataset
-import h5py
-import time
-from glob import glob
-from concurrent.futures import ThreadPoolExecutor
-import os
-from multiprocessing import cpu_count
-from tqdm import tqdm
-
-from torchvision import transforms
 import argparse
 import logging
+import os
+import time
+from concurrent.futures import ThreadPoolExecutor
+from glob import glob
+
+import h5py
+import numpy as np
+import torch
+from torch.utils.data import Dataset
+from torchvision import transforms
+from tqdm import tqdm
+
 os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 logger = logging.getLogger(__name__)
@@ -29,6 +28,7 @@ logger.addHandler(file_handler)
 
 def rbf_numerator(X,Y):
     return X@X.T + Y@Y.T - 2*X@Y.T
+
 
 # def rbf_kernel(X, Y, sigma=1.0):
 def mmd_rbf(X, Y, sigma=1.0):
@@ -57,6 +57,7 @@ def mmd_rbf(X, Y, sigma=1.0):
     
     return k_xx.sum()/(m*(m-1)) + k_yy.sum()/(n*(n-1)) - 2*k_xy.sum()/(m*n)
 
+
 def load_h5_as_array(file_path,key = 'logits_df',retries=5, wait=5):
     # Open the file in read mode and load the desired dataset.
     for attempt in range(retries):
@@ -78,6 +79,7 @@ def get_h5_shape(file_path,key = 'logits_df'):
         # Assuming data is stored in the first dataset
         return f[key]['block0_values'].shape
 
+
 def multiple_h5s_to_tensor(file_paths,max_workers=8):
     # Create an empty list to store the data
     # Use ThreadPoolExecutor to read files concurrently
@@ -86,8 +88,6 @@ def multiple_h5s_to_tensor(file_paths,max_workers=8):
 
     return torch.from_numpy(np.concatenate(arrays, axis=0))
 
-# def multiple_h5s_to_tensor_dask(file_paths):
-    
 
 class ProteinLabelDistributions(Dataset):
     def __init__(self, dataset_name: str, h5_paths: list, cache: bool = True, max_workers: int = 8):
@@ -160,9 +160,10 @@ class RunningMeanVariance:
             (self.mean, self.sample_variance) = (self.mean, self.M2 / (self.count - 1))
             return (self.mean, self.sample_variance)
 
-def get_sigma_median(dl_real, dl_fake, num_iterations,subbatch_size,device,debug=False):
 
-    dl_real_iter, dl_fake_iter = subbatch_iterator(dl_real, subbatch_size, device='cpu'), subbatch_iterator(dl_fake, subbatch_size, device='cpu')
+def get_sigma_median(dl_Y, dl_X, num_iterations,subbatch_size,device,debug=False):
+
+    dl_Y_iter, dl_X_iter = subbatch_iterator(dl_Y, subbatch_size, device='cpu'), subbatch_iterator(dl_X, subbatch_size, device='cpu')
 
     iteration = 0
     pbar = tqdm(total = num_iterations)
@@ -174,8 +175,8 @@ def get_sigma_median(dl_real, dl_fake, num_iterations,subbatch_size,device,debug
         try:
             aggregate = torch.cat(
                 (
-                    next(dl_real_iter),
-                    next(dl_fake_iter)),
+                    next(dl_Y_iter),
+                    next(dl_X_iter)),
                 dim=0
             ).to(device) # Concatenate the two batches
         except StopIteration:
@@ -217,7 +218,6 @@ def get_sigma_median(dl_real, dl_fake, num_iterations,subbatch_size,device,debug
     pbar.close()
     return median_dist_means, median_dist_stds, median_dist_std_errors
 
-
         
 def get_running_stats(data_loader, num_iterations,device):
 
@@ -246,10 +246,9 @@ def get_running_stats(data_loader, num_iterations,device):
     return mean_means, mean_stds, mean_std_errors
 
 
+def get_mmd_stats(dl_Y, dl_X, num_iterations,subbatch_size,sigma,device):
 
-def get_mmd_stats(dl_real, dl_fake, num_iterations,subbatch_size,sigma,device):
-
-    dl_real_iter, dl_fake_iter = subbatch_iterator(dl_real, subbatch_size, device=device), subbatch_iterator(dl_fake, subbatch_size, device=device)
+    dl_Y_iter, dl_X_iter = subbatch_iterator(dl_Y, subbatch_size, device=device), subbatch_iterator(dl_X, subbatch_size, device=device)
 
     rs = RunningMeanVariance()
     iteration = 0
@@ -260,13 +259,13 @@ def get_mmd_stats(dl_real, dl_fake, num_iterations,subbatch_size,sigma,device):
     
     while iteration + 1 <= num_iterations:
         try:
-            batch_real = next(dl_real_iter).double()
-            batch_fake = next(dl_fake_iter).double()
+            batch_Y = next(dl_Y_iter).double()
+            batch_X = next(dl_X_iter).double()
         except StopIteration:
             logger.info("End of dataset reached.")
             break
 
-        mmd = mmd_rbf(batch_real, batch_fake,sigma=sigma) #Compute mmd on sample
+        mmd = mmd_rbf(batch_Y, batch_X,sigma=sigma) #Compute mmd on sample
 
         if mmd.isnan() or mmd.isinf():
             logger.info(f"MMD is NaN for iteration {iteration}, skipping...")
@@ -290,7 +289,6 @@ def get_mmd_stats(dl_real, dl_fake, num_iterations,subbatch_size,sigma,device):
     return mmd_means, mmd_stds, mmd_std_errors, mmds
 
 
-
 def subbatch_iterator(dataloader, subbatch_size, device):
     for batch in dataloader:
         batch = batch.squeeze(0)
@@ -299,8 +297,6 @@ def subbatch_iterator(dataloader, subbatch_size, device):
             yield subbatch.to(device)
 
 # Test Cases #
-
-
 # X = torch.tensor([[0.0, 0.0],
 #                     [1.0, 1.0]])
 # Y = torch.tensor([[1.0, 0.0],
@@ -314,8 +310,6 @@ def subbatch_iterator(dataloader, subbatch_size, device):
 # logger.info(f"Expected MMD (manual): {expected:.4f}")
 
 # assert abs(result.item() - expected) < 1e-3, "Mismatch with manual MMD calculation"
-
-
 
 # X = torch.tensor([[1.0, 2.0],
 #                     [3.0, 4.0]])
@@ -344,7 +338,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='MMD Analysis')
     parser.add_argument('--input-dir', type=str, help='Input directory where all datasets are located (e.g. /data/generation_annotations)')
-    parser.add_argument('--real-datasets', type=str, nargs='+', help='List of real datasets to use',default=['uniref50','gigaref_clustered'])
+    parser.add_argument('--Y-datasets', type=str, nargs='+', help='List of Y datasets to use',default=['uniref50','gigaref_clustered'])
+    parser.add_argument('--X-datasets', type=str, nargs='+', help='List of X datasets to use',default=['dayhoff','rfdiffusion_both_filter','rfdiffusion_scrmsd','rfdiffusion_unfiltered'])
     parser.add_argument('--output-dir', type=str, help='Output directory for results')
     parser.add_argument('--subbatch-size', type=int, default=1000, help='Subbatch size for MMD computation')
     parser.add_argument('--num-iterations', type=int, default=10_000, help='Number of iterations for MMD computation')
@@ -373,68 +368,72 @@ if __name__ == "__main__":
         ]
     )
 
-    #TODO: Uncomment this and make this an optional list
-    fake_datasets_patterns = [
-        os.path.join(args.input_dir,'DAYHOFF_GENERATIONS/test_1_logits*'), 
-        os.path.join(args.input_dir,'RFDIFFUSION_GENERATIONS_BOTH_FILTER/test_1_logits*'),
-        os.path.join(args.input_dir,'RFDIFFUSION_GENERATIONS_SCRMSD/test_1_logits*'),
-        os.path.join(args.input_dir,'RFDIFFUSION_GENERATIONS_UNFILTERED/test_1_logits*')
-        
-    ]
-
-    real_ds_name_to_pattern = {
+    
+    ds_to_pattern = {
+        'dayhoff': os.path.join(args.input_dir,'DAYHOFF_GENERATIONS/test_1_logits*'),
+        'rfdiffusion_both_filter': os.path.join(args.input_dir,'RFDIFFUSION_GENERATIONS_BOTH_FILTER/test_1_logits*'),
+        'rfdiffusion_scrmsd': os.path.join(args.input_dir,'RFDIFFUSION_GENERATIONS_SCRMSD/test_1_logits*'),
+        'rfdiffusion_unfiltered': os.path.join(args.input_dir,'RFDIFFUSION_GENERATIONS_UNFILTERED/test_1_logits*'),
+        'uniref50_first_half': os.path.join(args.input_dir,'UNIREF50_10M_first_half/test_1_logits*'),
+        'uniref50_second_half': os.path.join(args.input_dir,'UNIREF50_10M_second_half/test_1_logits*'),
+        'gigaref_clustered_first_half': os.path.join(args.input_dir,'GIGAREF_CLUSTERED_10M_first_half/test_1_logits*'),
+        'gigaref_clustered_second_half': os.path.join(args.input_dir,'GIGAREF_CLUSTERED_10M_second_half/test_1_logits*'),
         'uniref50': os.path.join(args.input_dir,'UNIREF50_10M/test_1_logits*'),
-        'gigaref_clustered': os.path.join(args.input_dir,'GIGAREF_CLUSTERED_10M/test_1_logits*')
+        'gigaref_clustered': os.path.join(args.input_dir,'GIGAREF_CLUSTERED_10M/test_1_logits*'),
+        'gigaref_singletons': os.path.join(args.input_dir,'GIGAREF_SINGLETONS_10M/test_1_logits*')
     }
 
-    real_datasets_patterns = [
-        real_ds_name_to_pattern[ds] for ds in args.real_datasets
+    Y_datasets_patterns = [
+        ds_to_pattern[ds] for ds in args.Y_datasets
     ]
     
-    # Verify fake dataset patters and real dataset patterns exist
-    for fake_glob_pattern in fake_datasets_patterns:
-        assert glob(fake_glob_pattern), f"Fake dataset pattern {fake_glob_pattern} does not exist"
+    X_datasets_patterns = [
+        ds_to_pattern[ds] for ds in args.X_datasets
+    ]
+
+
+    # Verify X dataset patters and Y dataset patterns exist
+    for X_glob_pattern in X_datasets_patterns:
+        assert glob(X_glob_pattern), f"X dataset pattern {X_glob_pattern} does not exist"
            
-    for real_glob_pattern in real_datasets_patterns:
-        assert glob(real_glob_pattern), f"Real dataset pattern {real_glob_pattern} does not exist"
+    for Y_glob_pattern in Y_datasets_patterns:
+        assert glob(Y_glob_pattern), f"Y dataset pattern {Y_glob_pattern} does not exist"
 
 
-    for fake_glob_pattern in fake_datasets_patterns:
-        for real_glob_pattern in real_datasets_patterns:
+    for X_glob_pattern in X_datasets_patterns:
+        for Y_glob_pattern in Y_datasets_patterns:
             
-            fake_dataset_name = fake_glob_pattern.split('/')[-2]
-            real_dataset_name = real_glob_pattern.split('/')[-2]
+            X_dataset_name = X_glob_pattern.split('/')[-2]
+            Y_dataset_name = Y_glob_pattern.split('/')[-2]
 
-            logger.info(f"Fake dataset: {fake_dataset_name}")
-            logger.info(f"Real dataset: {real_dataset_name}")
+            logger.info(f"X dataset: {X_dataset_name}")
+            logger.info(f"Y dataset: {Y_dataset_name}")
 
             
-            ds_fake = H5BatchedDataset(
-                h5_paths = glob(fake_glob_pattern), 
+            ds_X = H5BatchedDataset(
+                h5_paths = glob(X_glob_pattern), 
                 transform = transform
             ) 
-            ds_real = H5BatchedDataset(
-                h5_paths = glob(real_glob_pattern),
+            ds_Y = H5BatchedDataset(
+                h5_paths = glob(Y_glob_pattern),
                 transform = transform
             ) 
 
-            dl_fake = torch.utils.data.DataLoader(
-                ds_fake,
+            dl_X = torch.utils.data.DataLoader(
+                ds_X,
                 batch_size=1,
                 num_workers=2,
                 pin_memory=True,
                 shuffle=False
             )
 
-            dl_real = torch.utils.data.DataLoader(
-                ds_real,
+            dl_Y = torch.utils.data.DataLoader(
+                ds_Y,
                 batch_size=1,
                 num_workers=2,
                 pin_memory=True,
                 shuffle=False
             )
-
-
 
             #Params
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -443,7 +442,7 @@ if __name__ == "__main__":
                 logger.info("getting median sigma")
                 (median_dist_means, 
                 median_dist_stds,
-                median_dist_std_errors) = get_sigma_median(dl_real, dl_fake, args.num_iterations,subbatch_size=args.subbatch_size, device = device, debug=args.debug)
+                median_dist_std_errors) = get_sigma_median(dl_Y, dl_X, args.num_iterations,subbatch_size=args.subbatch_size, device = device, debug=args.debug)
                 sigma = median_dist_means[-1] #Setting sigma to median heuristic
                 if args.debug:
                     logger.info(f"Median Dist Means: {median_dist_means[-1]}")
@@ -457,7 +456,7 @@ if __name__ == "__main__":
             (mmd_means,
             mmd_stds,
             mmd_std_errors, 
-            mmds) = get_mmd_stats(dl_real, dl_fake, args.num_iterations, subbatch_size=args.subbatch_size,sigma = sigma, device = device)
+            mmds) = get_mmd_stats(dl_Y, dl_X, args.num_iterations, subbatch_size=args.subbatch_size,sigma = sigma, device = device)
 
             if args.debug:
                 logger.info(f"MMD Means: {mmd_means[-1]}")
@@ -466,15 +465,15 @@ if __name__ == "__main__":
                 logger.info("Saving results")
                 #Save MMD info
                 np.save(
-                    os.path.join(args.output_dir,f'mmd_means_{fake_dataset_name}_{real_dataset_name}.npy'),
+                    os.path.join(args.output_dir,f'mmd_means_{X_dataset_name}_{Y_dataset_name}.npy'),
                     np.array(mmd_means)
                     )
                 np.save(
-                    os.path.join(args.output_dir,f'mmd_stds_{fake_dataset_name}_{real_dataset_name}.npy'),
+                    os.path.join(args.output_dir,f'mmd_stds_{X_dataset_name}_{Y_dataset_name}.npy'),
                     np.array(mmd_stds)
                     )
                 np.save(
-                    os.path.join(args.output_dir,f'mmd_std_errors_{fake_dataset_name}_{real_dataset_name}.npy'),
+                    os.path.join(args.output_dir,f'mmd_std_errors_{X_dataset_name}_{Y_dataset_name}.npy'),
                     np.array(mmd_std_errors)
                     )
                 
@@ -482,10 +481,10 @@ if __name__ == "__main__":
                 if args.sigma is None:
                         
                     np.save(
-                        os.path.join(args.output_dir,f'median_dist_means_{fake_dataset_name}_{real_dataset_name}.npy'),
+                        os.path.join(args.output_dir,f'median_dist_means_{X_dataset_name}_{Y_dataset_name}.npy'),
                         np.array(median_dist_means)
                         )
                     np.save(
-                        os.path.join(args.output_dir,f'median_dist_std_errors_{fake_dataset_name}_{real_dataset_name}.npy'),
+                        os.path.join(args.output_dir,f'median_dist_std_errors_{X_dataset_name}_{Y_dataset_name}.npy'),
                         np.array(median_dist_std_errors)
                         )

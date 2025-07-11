@@ -1,26 +1,18 @@
 import argparse
-import datetime
-import json
 import os
-import random
-from typing import Optional, Tuple
-from tqdm import tqdm
-import re
-
-
-import numpy as np
-from transformers import SuppressTokensLogitsProcessor
 
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
-from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
-from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
-from dayhoff.utils import (load_msa_config_and_model, get_latest_dcp_checkpoint_path,
-                           load_checkpoint, seed_everything)
 from dayhoff.collators import MSAARCollator
-from dayhoff.datasets import UniRefDataset, OpenProteinDataset
+from dayhoff.datasets import OpenProteinDataset, UniRefDataset
+from dayhoff.utils import (
+    load_checkpoint,
+    load_msa_config_and_model,
+    seed_everything,
+)
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
@@ -77,7 +69,6 @@ def get_val_dataloader(config, tokenizer, args):
     dl = DataLoader(
         dataset=ds_train, batch_size=batch_size, sampler=sampler, num_workers=8, collate_fn=collator, pin_memory=True
     )
-
     return dl
 
 
@@ -164,8 +155,6 @@ def validate(args: argparse.Namespace) -> None:
         out_file
     )
         
-
-
 
 
 def main():

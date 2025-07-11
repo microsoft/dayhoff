@@ -1,11 +1,19 @@
 from typing import Callable, Literal, Optional, Sequence, Tuple
 
-from evodiff.utils import Tokenizer
 import numpy as np
-from sequence_models.constants import START, STOP, SEP, GAP
 import torch
+from sequence_models.constants import GAP, SEP, START, STOP
 
-from dayhoff.constants import START_AL, END_AL, FIM_MIDDLE, FIM_PREFIX, FIM_SUFFIX, END_UL, START_UL
+from dayhoff.constants import (
+    END_AL,
+    END_UL,
+    FIM_MIDDLE,
+    FIM_PREFIX,
+    FIM_SUFFIX,
+    START_AL,
+    START_UL,
+)
+from evodiff.utils import Tokenizer
 
 
 def pad_to_mult(max_len, pad_to_mult):
@@ -431,15 +439,3 @@ class MSAARCollator:
             src = src[:, :self.trim_to2]
             tgt = tgt[:, :self.trim_to2]
         return src, tgt
-
-
-
-# from evodiff.utils import Tokenizer
-# from dayhoff.constants import UL_ALPHABET_PLUS
-# from dayhoff.collators import MSAARCollator
-# tokenizer = Tokenizer(protein_alphabet=UL_ALPHABET_PLUS)
-# collator = MSAARCollator(tokenizer)
-# msa_batch = [('ABC', ), ("DEFG", ), ("HHHHHH",)]
-# batch_msa = [['ABCD', ['ABCD', 'ABC-', '-BCD']], ['ABCD', ['ABCD', 'ABC', 'BCD']], [None, ['ABCD', 'ABC', 'BCD']], ['ABCD', []]]
-# collator(msa_batch)
-# collator(batch_msa)[0][0]

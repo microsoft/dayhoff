@@ -1,13 +1,14 @@
-from datasets import load_from_disk
+import argparse
+import json
+import os
+from multiprocessing import cpu_count
+
 import numpy as np
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
+from datasets import load_from_disk
 from tqdm import tqdm
-import json
-import os
-import argparse
-from multiprocessing import cpu_count
 
 """
 Sample usage: python src/create-fasta-sample.py --input_hf_path data/uniref50_202401/arrow/train/ --output_fasta_file data/generated_proteins/uniref50_202401_10M.fasta --n 10000000

@@ -1,11 +1,11 @@
-from tqdm import tqdm
 import json
 import os
+
 import numpy as np
+from tqdm import tqdm
+
 
 def main():
-    # gigaref_dir = "/mnt/amlt/data/gigaref/"
-    # out_dir = "/mnt/amlt/evodiff/generations/gigaref_analysis/"
     out_dir = "/home/kevyan/generations/gigaref_analysis/"
     gigaref_dir = "/home/kevyan/wu2/gigaref/"
 

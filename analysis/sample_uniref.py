@@ -1,9 +1,8 @@
-from tqdm import tqdm
 import os
 
 import numpy as np
-
 from sequence_models.utils import parse_fasta
+from tqdm import tqdm
 
 uniref_file = "/home/kevyan/data/uniref50_202401/consensus.fasta"
 

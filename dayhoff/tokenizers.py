@@ -1,6 +1,7 @@
-from transformers.tokenization_utils import AddedToken, PreTrainedTokenizer
-from typing import List, Optional, Union
 import os
+from typing import List, Optional, Union
+
+from transformers.tokenization_utils import AddedToken, PreTrainedTokenizer
 
 MASK = "#"
 MSA_PAD = "!"

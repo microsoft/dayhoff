@@ -1,5 +1,5 @@
-from typing import Sequence, Type
 import functools
+from typing import Sequence, Type
 
 import torch.distributed.algorithms._checkpoint.checkpoint_wrapper as cw
 import torch.nn as nn

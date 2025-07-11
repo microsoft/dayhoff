@@ -1,6 +1,7 @@
+import argparse
 import json
 import random
-import argparse
+
 from tqdm import tqdm
 
 if __name__ == "__main__":

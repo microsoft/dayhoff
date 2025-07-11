@@ -1,23 +1,24 @@
 import argparse
 import os
 import shutil
-from sequence_models.utils import transformer_lr
+
 import torch
 import torch.distributed as dist
-from torch.optim import Adam
-from torch.optim.lr_scheduler import LambdaLR
-from dayhoff.utils import seed_everything, load_msa_config_and_model, load_checkpoint, HF_MODEL_CARD_TEMPLATE
-from dayhoff import logger
 from dotenv import load_dotenv
-from huggingface_hub import login, ModelCard
-from huggingface_hub import HfApi
-from dayhoff.tokenizers import ProteinTokenizer
+from huggingface_hub import HfApi, ModelCard, login
 
+from dayhoff import logger
+from dayhoff.tokenizers import ProteinTokenizer
+from dayhoff.utils import (
+    HF_MODEL_CARD_TEMPLATE,
+    load_checkpoint,
+    load_msa_config_and_model,
+    seed_everything,
+)
 
 # Load environment variables
 load_dotenv()
 login(token=os.getenv("HF_TOKEN"))
-
 
 # Set rank and world size environment variables
 os.environ["RANK"] = os.environ.get("RANK", "0")
@@ -30,13 +31,14 @@ DEVICE = torch.device(f"cuda:{RANK}")
 MODEL_NAME = "dayhoff"
 FILE_DIR = os.path.dirname(__file__)
 
+
 def push_to_hub(args: argparse.Namespace) -> None:
     api = HfApi(token=os.environ["HF_TOKEN"])
     seed_everything(args.random_seed)
     dist.init_process_group(backend="nccl")
     
     os.makedirs(args.out_dir, exist_ok=True)
-    dayhoff_tokenizers_dir = os.path.abspath(os.path.join(FILE_DIR,'..','dayhoff/tokenizers.py'))
+    dayhoff_tokenizers_dir = os.path.abspath(os.path.join(FILE_DIR,'..','..','dayhoff/tokenizers.py'))
 
     # HF requires the tokenizer code to be in the same folder with models and everything else.
     # Copying code automatically for ease of use.
@@ -49,8 +51,6 @@ def push_to_hub(args: argparse.Namespace) -> None:
     tokenizer = ProteinTokenizer()
     tokenizer.save_pretrained(args.out_dir)
     
-    
-    
     for model_variant in args.variants:
         in_dir = os.path.join(args.checkpoints_dir, model_variant)
         out_variant_dir = os.path.join(args.out_dir, model_variant)
@@ -60,9 +60,7 @@ def push_to_hub(args: argparse.Namespace) -> None:
             continue
 
         #TODO: could add code block to download checkpoint from storage
-
         #Load model checkpoint and tokenizer
-        
         config, _, model, _ = load_msa_config_and_model(os.path.join(in_dir, "config.json"))
         _ = load_checkpoint(
         model, None, None, in_dir, args.checkpoint_step, rank=RANK
@@ -70,24 +68,36 @@ def push_to_hub(args: argparse.Namespace) -> None:
         
         model = model.module # Remove ARDiffusionModel wrapper
         model = model.to(DEVICE)
-
         
         # Save model and tokenizer for each variant in a separate local folder
         model.save_pretrained(out_variant_dir)
-        
-
-        
-        
+            
     ## UPLOAD TO HUGGING FACE ##
     logger.info(f"Pusing to Hugging Face repo: {args.repo_id}")
 
-    #Create repo if it doesn't exist
-    api.create_repo(repo_id=args.repo_id,
-                    repo_type='model',
-                    private=not args.public,
-                    exist_ok=args.exist_ok # If the repo already exists, do not raise an exception and replace
-                    )
+    # Check if repo already exists
+    repo_exists = api.repo_exists(repo_id=args.repo_id, repo_type="model")
     
+    if args.repo_create_mode == "create":
+        if repo_exists:
+            raise RuntimeError(f"Repo {args.repo_id} already exists. Use 'replace' or 'append' mode instead.")
+        else:
+            api.create_repo(repo_id=args.repo_id, repo_type="model", private=not args.public)
+    elif args.repo_create_mode == "replace":
+        if repo_exists:
+            print(f"Replacing repo {args.repo_id}...")
+            # Delete the existing repo; adjust if you need a different deletion method.
+            api.delete_repo(repo_id=args.repo_id, repo_type="model")
+        # Create the repo fresh
+        api.create_repo(repo_id=args.repo_id, repo_type="model", private=not args.public)
+    elif args.repo_create_mode == "append":
+        if not repo_exists:
+            # Create the repo if it does not exist
+            api.create_repo(repo_id=args.repo_id, repo_type="model", private=not args.public)
+        print(f"Appending to repo {args.repo_id}...")
+    else:
+        raise ValueError("repo_mode must be one of 'create', 'replace', or 'append'")
+
     # Create model card
     card = ModelCard(
         HF_MODEL_CARD_TEMPLATE.format(
@@ -113,7 +123,8 @@ def main():
     '''
     Sample usage:
     
-    python src/models-to-hub.py --checkpoints-dir data/checkpoints/ --out-dir hf_repo/ --variants jamba-170m-seqsam-36w jamba-170m-seqsam-36w-copy --repo-id samirchar/test_dayhoff --exist-ok
+    python src/dataprep/models-to-hub.py --checkpoints-dir data/checkpoints/ --out-dir data/checkpoints/hf_models/ --variants jamba-170m-seqsam-36w jamba-170m-seqsam-36w-copy --repo-id samirchar/test_Dayhoff --cache --repo-create-mode append
+
     '''
 
     parser = argparse.ArgumentParser()
@@ -129,7 +140,7 @@ def main():
 
     # Huggingface hub arguments
     parser.add_argument("--repo-id",type=str,help="Huggingface repo_id = username/repo_name. Example: microsoft/dayhoff",required=True)
-    parser.add_argument("--exist-ok",action="store_true",help="If the repo already exists, do not raise an exception and replace")
+    parser.add_argument("--repo-create-mode",type=str,choices=["create", "replace", "append"],default="append", help="How to handle repo creation when it exists: 'create', 'replace', or 'append'.")
     parser.add_argument("--public", action="store_true", help="Make the model public on the hub. Private by default.")
 
     

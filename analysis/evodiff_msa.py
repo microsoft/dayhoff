@@ -1,27 +1,14 @@
 import argparse
-import datetime
-import json
 import os
-import random
-from typing import Optional, Tuple
-from tqdm import tqdm
-import re
-
 
 import numpy as np
-from transformers import SuppressTokensLogitsProcessor
-
 import torch
-from torch.utils.data import DataLoader, DistributedSampler
-
 from sequence_models.constants import MASK
-from dayhoff.utils import (load_msa_config_and_model, get_latest_dcp_checkpoint_path,
-                           load_checkpoint, seed_everything)
 from sequence_models.utils import parse_fasta
+from tqdm import tqdm
 
+from dayhoff.utils import seed_everything
 from evodiff.pretrained import MSA_OA_DM_MAXSUB
-
-
 
 
 def generate(args: argparse.Namespace) -> None:

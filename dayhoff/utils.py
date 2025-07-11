@@ -1,18 +1,23 @@
 import json
+import logging
 import os
 import random
 from typing import Optional, Tuple
-import logging
+
 import numpy as np
 import torch
-from torch.distributed.checkpoint.state_dict import (get_state_dict, set_state_dict,
-                                                     get_model_state_dict, set_model_state_dict)
 import torch.distributed.checkpoint as dcp
 import torch.nn as nn
+from torch.distributed.checkpoint.state_dict import (
+    get_model_state_dict,
+    get_state_dict,
+    set_model_state_dict,
+    set_state_dict,
+)
 
-from evodiff.utils import Tokenizer
-from dayhoff.model import _get_hf_model, ARDiffusionModel
 from dayhoff.constants import UL_ALPHABET_PLUS
+from dayhoff.model import ARDiffusionModel, _get_hf_model
+from evodiff.utils import Tokenizer
 
 
 def cosine_anneal_with_warmup(n_warmup_steps, n_anneal_steps, final_ratio=0.0):
@@ -39,7 +44,7 @@ def get_latest_dcp_checkpoint_path(ckpt_dir: str, last_step: int = -1) -> Option
     return ckpt_path
 
 
-def load_msa_config_and_model(config_fpath, alphabet=UL_ALPHABET_PLUS, use_flash_attention_2=True):
+def load_msa_config_and_model(config_fpath, alphabet=UL_ALPHABET_PLUS, use_flash_attention_2=False):
     with open(config_fpath, "r") as f:
         config = json.load(f)
 
@@ -148,11 +153,11 @@ def load_checkpoint(
             )
         if os.path.exists(os.path.join(ckpt_path, "scheduler%d.pt" %rank)):
             sd = torch.load(
-                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu")
+                os.path.join(ckpt_path, "scheduler%d.pt" %rank), map_location=torch.device("cpu"),
             )
         elif os.path.exists(os.path.join(ckpt_path, "scheduler.pt")):
             sd = torch.load(
-                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu")
+                os.path.join(ckpt_path, "scheduler.pt"), map_location=torch.device("cpu"),
             )
         else:
             return 0, 0, 0, 0, 0

@@ -1,26 +1,17 @@
 import argparse
-import datetime
-import json
 import os
-import random
-from typing import Optional, Tuple
-from tqdm import tqdm
-import re
-
-
-import numpy as np
-from transformers import SuppressTokensLogitsProcessor
 
 import torch
+import torch.distributed as dist
+from sequence_models.constants import CAN_AAS, GAP, SEP, START, STOP
 from torch.utils.data import DataLoader, DistributedSampler
+from tqdm import tqdm
+from transformers import SuppressTokensLogitsProcessor
 
-from sequence_models.constants import START, STOP, CAN_AAS, SEP, GAP, MSA_PAD
-from dayhoff.constants import UL_ALPHABET_PLUS, END_AL, END_UL, START_AL, START_UL
-from dayhoff.utils import (load_msa_config_and_model, get_latest_dcp_checkpoint_path,
-                           load_checkpoint, seed_everything)
-from dayhoff.datasets import OpenProteinDataset
 from dayhoff.collators import MSAARCollator
-
+from dayhoff.constants import END_AL, END_UL, START_AL, START_UL, UL_ALPHABET_PLUS
+from dayhoff.datasets import OpenProteinDataset
+from dayhoff.utils import load_checkpoint, load_msa_config_and_model, seed_everything
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
@@ -81,9 +72,9 @@ def get_msa_dataloader(config, tokenizer, args, task):
     return ds_train, dl_train
 
 
-
 def generate(args: argparse.Namespace) -> None:
     seed_everything(args.random_seed + RANK)
+    dist.init_process_group(backend="nccl")
 
     # load model parameters from config file
     config, tokenizer, model, block = load_msa_config_and_model(os.path.join(args.in_fpath, "config.json"),

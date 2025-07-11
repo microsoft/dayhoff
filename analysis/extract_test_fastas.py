@@ -1,23 +1,18 @@
 import datetime
 import os
-from tqdm import tqdm
-
 
 import numpy as np
-
 import torch
+from sequence_models.constants import AMB_AAS, OTHER_AAS
+from tqdm import tqdm
 
-from sequence_models.constants import OTHER_AAS, AMB_AAS
-from dayhoff.utils import seed_everything
 from dayhoff.datasets import UniRefDataset
-
+from dayhoff.utils import seed_everything
 
 # default to a single-GPU setup if not present
 RANK = int(os.environ["RANK"])
 WORLD_SIZE = int(os.environ["WORLD_SIZE"])
 DEVICE = torch.device(f"cuda:{RANK}")
-
-
 seed_everything(0)
 
 
@@ -71,10 +66,6 @@ def generate() -> None:
                         f.write(seq + "\n")
                         successes += 1
                         pbar.update(1)
-
-
-
-
 
 
 def main():

@@ -1,38 +1,22 @@
-import os.path as osp
-import os
-import shutil
-from datasets import disable_caching
-# disable_caching()
-is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
-# cache_dir = os.path.join("/mnt/blob/", "hf_cache")
-# os.makedirs(cache_dir, exist_ok=True) #Give read and write permissions to all users
-# os.environ["HF_HOME"] = cache_dir
-
-# if is_amlt:
-#     os.environ["HF_DATASETS_CACHE"] = cache_dir
-#     os.environ["TRANSFORMERS_CACHE"] = cache_dir
-#     os.environ["HUGGINGFACE_HUB_CACHE"] = cache_dir
-#     print("HF_HOME set to: ", os.environ["HF_HOME"])
-#     print("blobfuse cache dir exists: ",os.path.exists(os.path.join(os.environ["AMLT_OUTPUT_DIR"],"mount_cache")))
-#     free_cache_dir_space = shutil.disk_usage(cache_dir).free
-#     print("Free space in cache dir: ", free_cache_dir_space)
-#
-
 import argparse
-from glob import glob, has_magic
-import pyfastx
 import json
-from datasets import Dataset, DatasetDict, is_caching_enabled
-from typing import Literal
+import os
+import os.path as osp
 from multiprocessing import cpu_count
+from typing import Literal
+
 import ijson
-from dotenv import load_dotenv
-from azure.identity import ManagedIdentityCredential, DefaultAzureCredential
+import pyfastx
+from datasets import Dataset, DatasetDict, is_caching_enabled
+
+is_amlt = os.environ.get("AMLT_OUTPUT_DIR", None) is not None
+
 
 def json_generator(json_path, key):
     with open(json_path,'r') as f: 
         for record in ijson.items(f,f"{key}.item"):
             yield  {"ids":record}
+            
             
 def parse_pyfastx_generator(fasta_fpath):
     fasta = pyfastx.Fastx(fasta_fpath,comment=True) # Fasta fasta parser written in C
@@ -45,9 +29,6 @@ def parse_pyfastx_generator(fasta_fpath):
             "description": description
         }
         idx += 1
-        # Temporarily generate only first 1000 sequences
-        # if idx == 10_000_000: #TODO: remove this line
-        #     break
  
  
 def make_dset_from_ids(ids_dataset: Dataset, seq_dset: Dataset, num_proc: int = cpu_count()) -> Dataset:
@@ -136,34 +117,6 @@ if __name__ == "__main__":
 
     save_to_azure_blob = False #Save directly to Azure blob storage instead of disk. Save to disk will also save in azure storage if the blob is mounted but will ocupy disk space. This may be a bad idea for large datasets.
     storage_options = None
-
-    if args.azure_storage_account_name is not None and args.azure_storage_container_name is not None:
-        #Check required env variables exist for connection AZURE_CLIENT_ID and AZURE_TENANT_ID
-        load_dotenv()
-        if os.environ.get("AZURE_CLIENT_ID", None) is None or os.environ.get("AZURE_TENANT_ID", None) is None:
-            raise ValueError("AZURE_CLIENT_ID and AZURE_TENANT_ID must be set in the environment variables. Add them to .env. These are found in the user assigned managed identity in Azure Portal, under Properties")
-
-        # get uai resource id from UAI_RESOURCE_ID or _AZUREML_SINGULARITY_JOB_UAI
-        UAI_RESOURCE_ID = os.environ.get("_AZUREML_SINGULARITY_JOB_UAI", None)
-        if UAI_RESOURCE_ID is None:
-            print("UAI_RESOURCE_ID not found in _AZUREML_SINGULARITY_JOB_UAI. Trying UAI_RESOURCE_ID")
-            UAI_RESOURCE_ID = os.environ.get("UAI_RESOURCE_ID", None)
-            print("UAI_RESOURCE_ID found in UAI_RESOURCE_ID")
-        if UAI_RESOURCE_ID is None:
-            raise ValueError("UAI_RESOURCE_ID or _AZUREML_SINGULARITY_JOB_UAI must be set in the environment variables. Add them to .env. This is found in the user assigned managed identity in Azure Portal, under Properties")
-        
-        save_to_azure_blob = True
-
-        try:
-            credentials = DefaultAzureCredential(logging_enable=True)
-            # identity_config={"resource_id": UAI_RESOURCE_ID}
-            # credentials = ManagedIdentityCredential(
-            #     logging_enable=True,
-            #     identity_config = identity_config
-            # )
-            storage_options = dict(credential=credentials)
-        except Exception as e:
-            raise RuntimeError("Failed to initialize Azure credentials. Ensure the environment variables are set correctly.") from e
 
  
     if not ((args.fasta_path is not None) ^ (args.fastas_glob_pattern is not None)):

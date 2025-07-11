@@ -1,12 +1,9 @@
 import os
-import numpy as np
-import pandas as pd
-from scipy import stats
+
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 
-
-# Scaffolding summary
 model_order = [
     '170m-uniref50',
     '170m-uniref90',
