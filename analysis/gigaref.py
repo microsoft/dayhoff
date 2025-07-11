@@ -67,9 +67,9 @@ for i, db in enumerate(columns):
         db = "SMAG"
     elif db == "metaeuk":
         db = "MetaEuk"
-    count_df.loc[len(count_df), ["database", "count", "fraction", "ggr"]] = (db, singleton_sums[i], singleton_sums[i] / singleton_sums[-1], "singletons")
+    count_df.loc[len(count_df), ["database", "count", "fraction", "ggr"]] = (db, singleton_sums[i], singleton_sums[i] / singleton_sums[-1], "GigaRef-singletons")
     count_df.loc[len(count_df), ["database", "count", "fraction", "ggr"]] = (db, database_sizes[i] - singleton_sums[i],
-                                                                             (database_sizes[i] - singleton_sums[i]) / (database_sizes[-1] - singleton_sums[-1]), "clusters")
+                                                                             (database_sizes[i] - singleton_sums[i]) / (database_sizes[-1] - singleton_sums[-1]), "GigaRef-clusters")
 big_cluster_compositions = cluster_compositions[ns_ids]
 ur100id = list(columns).index("UniRef100")
 big_cluster_count = len(big_cluster_compositions)
@@ -82,27 +82,74 @@ only_ur100_count = np.sum(only_ur100_ids)
 print("no ur100\tonly ur100\tmixed")
 print(no_ur100_count, only_ur100_count,  big_cluster_count - no_ur100_count - only_ur100_count)
 pal = sns.color_palette()
-skip = 50000
+skip = 1000
+plot_me = [mix_compositions[:, -1], mix_compositions[:, ur100id]]
+plot_me = np.stack(plot_me)
+plot_me = pd.DataFrame(plot_me.T, columns=["x", "y"])
+plot_me = plot_me.drop_duplicates()
+plot_me = plot_me.sort_values(by=["x", "y"])
 fig, ax = plt.subplots(1, 1)
-_ = ax.plot(mix_compositions[::skip, -1], mix_compositions[::skip, ur100id], '.', color='gray', alpha=0.6, label="Metagenomic samples only")
-_ = ax.plot(no_ur100_compositions[::skip, -1], no_ur100_compositions[::skip, ur100id], '.', color=pal[4], alpha=0.6, label="UR100 + metagenomic samples")
+_ = ax.plot(plot_me.iloc[::skip, 0], plot_me.iloc[::skip, 1], '.', color='gray', ms=3, alpha=0.6, label="UR100 + metagenomic samples")
+plot_me = [no_ur100_compositions[:, -1], no_ur100_compositions[:, ur100id]]
+plot_me = np.stack(plot_me)
+plot_me = pd.DataFrame(plot_me.T, columns=["x", "y"])
+plot_me = plot_me.drop_duplicates()
+plot_me = plot_me.sort_values(by=["x", "y"])
+_ = ax.plot(plot_me.iloc[::5]['x'], plot_me.iloc[::5]['y'], '.', ms=3, color=pal[4], alpha=0.9, label="Metagenomic samples only")
 _ = ax.set_xlabel('Cluster size')
 _ = ax.set_ylabel('# UR100 members')
 _ = ax.legend(loc='best')
 _ = ax.set_xscale('log')
 _ = fig.savefig(os.path.join(out_dir, "gigaref_compositions.pdf"), dpi=300, bbox_inches='tight')
+skip = 100
+fig, ax = plt.subplots(1, 1)
+plot_me = [mix_compositions[:, -1], mix_compositions[:, -1] - mix_compositions[:, ur100id]]
+plot_me = np.stack(plot_me)
+plot_me = pd.DataFrame(plot_me.T, columns=["x", "y"])
+plot_me = plot_me.drop_duplicates()
+plot_me = plot_me.sort_values(by=["x", "y"])
+_ = ax.plot(plot_me.iloc[::skip, 0], plot_me.iloc[::skip, 1], '.', color='gray', ms=3, alpha=0.6, label="UR100 + metagenomic")
+plot_me = [no_ur100_compositions[:, -1], no_ur100_compositions[:, ur100id]]
+plot_me = np.stack(plot_me)
+plot_me = pd.DataFrame(plot_me.T, columns=["x", "y"])
+plot_me = plot_me.drop_duplicates()
+plot_me = plot_me.sort_values(by=["x", "y"])
+plot_me['y'] = plot_me['x'] - plot_me['y']
+_ = ax.plot(plot_me.iloc[:]['x'], plot_me.iloc[:]['y'], '.', ms=3, color=pal[4], alpha=0.7, label="Metagenomic only")
+_ = ax.set_xlabel('Cluster size')
+_ = ax.set_ylabel('# Metagenomic members')
+_ = ax.legend(loc='upper left')
+_ = ax.set_xscale('log')
+_ = ax.set_yscale('log')
+_ = fig.savefig(os.path.join(out_dir, "gigaref_compositions_inverted.pdf"), dpi=300, bbox_inches='tight')
+
+def plot_cdf(x, color=sns.color_palette()[0], label=None, ax=None, **kwargs, ):
+    p = x.values
+    p.sort()
+    _ = ax.plot(p, np.linspace(0, 1, len(x)), '-', color=color, label=label, **kwargs)
+mix_compositions.shape
+
+fig, ax = plt.subplots(1, 1)
+_ = ax.plot(mix_compositions[::skip, -1], mix_compositions[::skip, ur100id], '.', color=pal[4], alpha=0.6, label="UR100 + metagenomic samples")
+_ = ax.plot(no_ur100_compositions[::skip, -1], no_ur100_compositions[::skip, ur100id], '.', color='gray', alpha=0.6, label="Metagenomic samples only")
+_ = ax.set_xlabel('Cluster size')
+_ = ax.set_ylabel('# UR100 members')
+_ = ax.legend(loc='best')
+_ = ax.set_xscale('log')
+_ = fig.savefig(os.path.join(out_dir, "gigaref_compositions_ecdf.pdf"), dpi=300, bbox_inches='tight')
 
 fig, ax = plt.subplots(1, 1)
 _ = sns.barplot(data=count_df[count_df['database'] != "total"], x="database", y="count", hue="ggr",
                 ax=ax, palette=[pal[4], pal[6]],
                 order=['SRC', 'MGY', 'MERC', 'UniRef100', 'SMAG', 'TOPAZ', 'MetaEuk',
-                       'MGV', 'GPD'], legend=True, hue_order=['clusters', 'singletons'])
+                       'MGV', 'GPD'], legend=True, hue_order=['GigaRef-clusters', 'GigaRef-singletons'])
 # _ = sns.barplot(data=count_df[count_df['database'] != "total"], x="database", y="fraction", hue="ggr",
 #                 ax=axs[1], palette=[pal[4], sns.color_palette("pastel")[4]],
 #                 order=['SRC', 'MGY', 'MERC', 'UniRef100', 'smag', 'TOPAZ', 'metaeuk',
 #                        'MGV', 'GPD'], hue_order=['clusters', 'singletons'])
 _ = ax.semilogy()
 _ = ax.set_xlabel("")
+_ = ax.set_ylabel("Count")
 _ = ax.set_xticks(ax.get_xticks())
 _ = ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
 # _ = ax.tick_params(axis="x", labelrotation=45, horizontalalignment="right")
@@ -154,7 +201,7 @@ for model in model_order:
 
 
 # get all the FPDs
-fig, ax = plt.subplots(1, 1, figsize=(6.5, 4.8))
+fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8))
 _ = sns.barplot(plot_me, x='metric', y='value', hue='dataset', ax=ax,
                 hue_order=[model_dict[m]['name'] for m in model_order], palette=model_palette)
 _ = ax.set_xlabel("")
@@ -166,87 +213,58 @@ _ = fig.savefig(os.path.join(out_dir, "gigaref_fpds.pdf"), bbox_inches='tight', 
 
 
 
-## GIGAREF PLDDTs and scPERPs
-pldddts = {
-    "Datasets": ["Reps", "Singletons", "UniRef50"],
-    "Mean": [61.824312446845234, 56.09045572735549, 65.20655783405739],
-    "StdDev": [19.86909229559785, 20.122267214806396, 19.72222931341456]
+df_fid = pd.read_csv(os.path.join(out_dir, "ggr_plddt_mpnn.csv"))
+df_fid = df_fid.drop_duplicates(subset='file')
+model_name_dict = {
+    'uniref50_': "UniRef50",
+    'rep': "GigaRef-clusters",
+    'singletons': "GigaRef-singletons"
 }
-pldddts_df = pd.DataFrame(pldddts)
+dataset_order = [
+    'UniRef50',
+    "GigaRef-clusters",
+    'GigaRef-singletons',
+]
+pal = sns.color_palette()
+hue_order = ['gray', pal[4], pal[6]]
 
-perps = {
-    "Datasets": ["Reps", "Singletons", "UniRef50"],
-    "Mean": [9.673995, 10.068662, 9.483173],
-    "StdDev": [2.866755, 2.866755, 2.8937333]
+for i, row in df_fid.iterrows():
+    df_fid.loc[i, 'dataset'] = model_name_dict[row['model']]
+    df_fid.loc[i, 'model_sort'] = dataset_order.index(df_fid.loc[i, 'dataset'])
+df_fid['pLDDT'] = df_fid['esmfoldplddt']
+df_fid['scPerplexity'] = df_fid['mpnnperplexity']
+df_fid = df_fid.sort_values('model_sort')
+fig, ax = plt.subplots(1, 1, figsize=(6.4, 4.8))
+_ = sns.scatterplot(df_fid, x='pLDDT', y='scPerplexity', hue='dataset', ax=ax,
+                hue_order=dataset_order, palette=hue_order, alpha=0.7, s=10)
+legend = ax.legend(
+    loc='upper right',
+    # bbox_to_anchor=(0.9, 0.9),
+    # bbox_transform=fig.transFigure,
+    title=None
+)
+_ = fig.savefig(os.path.join(out_dir, "gigaref_fidelities.pdf"), bbox_inches='tight', dpi=300)
+
+cdfs = {
+    "pLDDT": (plt.subplots(1, 1, figsize=(6.4, 4.8)), "pLDDT"),
+    "scPerplexity": (plt.subplots(1, 1, figsize=(6.4, 4.8)), "scPerplexity"),
 }
-perps_df = pd.DataFrame(perps)
+model_to_hue = {d: h for d, h in zip(dataset_order, hue_order)}
+for dataset in dataset_order:
+    for cdf in cdfs:
+        df_lim = df_fid[df_fid['dataset'] == dataset]
+        v = df_lim[cdf].values
+        v.sort()
+        item = cdfs[cdf]
+        _ = item[0][1].plot(v, np.linspace(0, 1, len(v)), '-', color=model_to_hue[dataset], label=dataset)
+
+for cdf in cdfs:
+    fig, ax = cdfs[cdf][0]
+    if cdf == 'pLDDT':
+        _ = ax.legend(loc='best')
+    _ = ax.set_xlabel(cdfs[cdf][1])
+    _ = ax.set_ylabel('Percentile')
+    _ = fig.savefig(os.path.join(out_dir, "%s.pdf" %cdf), bbox_inches='tight', dpi=300)
 
 
-# basic bar plot
-def bar_fpd(data, title, filename):
-    """
-    Create and save a bar plot for FPD values.
-    """
-    plt.figure(figsize=(6, 6))
-    sns.barplot(x="Datasets", y="FPD", data=data, hue="Datasets",
-                palette=["grey"] * len(data["Datasets"]))  # type: ignore
-    plt.ylim(0, 0.5)
-    plt.xlabel("Datasets")
-    plt.ylabel("FPD")
-    plt.title(title)
-    plt.savefig(filename, format="pdf")
-    plt.close()
-
-
-def plot_bar(data, title, filename):
-    """
-    Create and save a bar plot with error bars for mean and standard deviation values.
-    """
-    plt.figure(figsize=(4, 6))
-    sns.barplot(x="Datasets", y="Mean", data=data, palette="muted", ci=None)
-    plt.errorbar(x="Datasets", y="Mean", yerr="StdDev", data=data, fmt='none', c='black', capsize=5)
-    plt.xlabel("Datasets")
-    plt.ylabel(title)
-    plt.title(title)
-    plt.savefig(filename, format="pdf")
-    plt.close()
-
-
-# Function to create and save pie charts
-def gigaref_pie_chart(datasets, titles):
-    """
-    Create and save a pie chart for the given data.
-    """
-    fig, axs = plt.subplots(1, 2, figsize=(12, 5))
-    for data, ax, title in zip(datasets, axs, titles):
-        labels = data.keys()
-        colors = sns.color_palette("pastel")[0:len(labels)]
-        values = data.values()
-        values = [v for v in values if v > 0]
-        labels = [la for v, la in zip(values, labels) if v > 0]
-
-        wedges, texts, autotexts = ax.pie(
-            values, labels=labels, autopct='%1.1f%%', colors=colors, startangle=140, wedgeprops={'edgecolor': 'black'}
-        )
-        ax.set_title(title)
-    # legend_labels = [f'{label}: {value}%' for label, value in
-    #                  zip(labels, [round(value / sum(values) * 100, 2) for value in values])]
-    axs[0].legend(loc="upper right")
-    for ax in axs:
-        ax.axis('equal')
-    fig.savefig(os.path.join(out_dir, "composition_pies.pdf"), dpi=300, bbox_inches='tight')
-
-gigaref_pie_chart((n_clusters, n_singletons), ("Clusters", "Singletons"))
-
-# plot taxonomy pie charts
-# gigaref_pie_chart(n_clusters, "Composition of GigaRef Clusters", "cluster_composition.pdf")
-# gigaref_pie_chart(n_singletons, "Composition of GigaRef Singletons", "singleton_composition.pdf")
-
-# plot fpd bar charts
-# bar_fpd(fpds_df, "Distributional Distances for Dayhoff Datasets", "gigaref_fpd.pdf")
-plot_bar(pldddts_df, "pLDDT", "gigaref_plddt.pdf")
-plot_bar(perps_df, "scPerplexity", "gigaref_scperplexity.pdf")
-
-
-
-
+print(df_fid.groupby('dataset').agg({"pLDDT": ["mean", "std"], "scPerplexity": ["mean", "std"]}))
