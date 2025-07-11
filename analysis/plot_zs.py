@@ -77,10 +77,7 @@ for dms in ['substitutions']:
         _ = shutil.copyfile(os.path.join(data_fpath, 'proteingym_repeats_gap3', dms, prediction_file), os.path.join(out_dir, prediction_file.replace(model_name, '')[1:]))
 
 
-
-
 # Write the outputs that proteingym needs to collate results
-
 pal = sns.color_palette()
 fig, ax = plt.subplots()
 dfs = []

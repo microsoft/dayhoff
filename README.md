@@ -4,7 +4,7 @@ Dayhoff is an Atlas of both protein sequence data and generative language models
 
 The Dayhoff architecture is a hybrid of state-space Mamba layers and Transformer self-attention, interleaved with Mixture-of-Experts modules to maximize capacity while preserving efficiency. It natively handles long contexts, allowing both single sequences and unrolled MSAs to be modeled. Trained with an autoregressive objective in both N→C and C→N directions, Dayhoff supports order-agnostic infilling and scales to billions of parameters.
 
-If you use the code, data, models, or results. please cite our [preprint](aka.ms/dayhoff/preprint).
+If you use the code, data, models, or results. please cite our [preprint](https://aka.ms/dayhoff/preprint).
 
 <p align="center">
 <img src="img/fig1_schematic.png" />
@@ -148,7 +148,7 @@ For the largest datasets, consider using `streaming=True`.
 
 ## Models
 
-Weights are available for the following models, as described in the [paper](aka.ms/dayhoff/preprint)
+Weights are available for the following models, as described in the [paper](https://aka.ms/dayhoff/preprint)
 
 ### 170M parameter models
 * **Dayhoff-170m-UR50**: A 170M parameter model trained on UniRef50 cluster representatives
