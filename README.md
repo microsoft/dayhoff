@@ -1,6 +1,6 @@
 # Dayhoff
 
-Dayhoff is an Atlas of both protein sequence data and generative language models — a centralized resource that brings together 3.3 billion protein sequences across 1.7 billion clusters of metagenomic and natural protein sequences (GigaRef), 46 million structure-derived synthetic sequences (BackboneRef), and 16 million multiple sequence alignments (OpenProteinSet). These models can natively predict zero-shot mutation effects on fitness, scaffold structural motifs by conditioning on evolutionary or structural context, and perform guided generation of novel proteins within specified families. Learning from metagenomic and structure-based synthetic data from the Dayhoff Atlas increased the cellular expression rates of generated proteins, highlighting the real-world value of expanding the scale, diversity, and novelty of protein sequence data. 
+Dayhoff is an Atlas of both protein sequence data and generative language models — a centralized resource that brings together 3.3 billion protein sequences across 1.7 billion clusters of metagenomic and natural protein sequences (GigaRef), 46 million structure-based synthetic sequences (BackboneRef), and 16 million multiple sequence alignments (OpenProteinSet). These models can natively predict zero-shot mutation effects on fitness, scaffold structural motifs by conditioning on evolutionary or structural context, and perform guided generation of novel proteins within specified families. Learning from metagenomic and structure-based synthetic data from the Dayhoff Atlas increased the cellular expression rates of generated proteins, highlighting the real-world value of expanding the scale, diversity, and novelty of protein sequence data. 
 
 The Dayhoff architecture is a hybrid of state-space Mamba layers and Transformer self-attention, interleaved with Mixture-of-Experts modules to maximize capacity while preserving efficiency. It natively handles long contexts, allowing both single sequences and unrolled MSAs to be modeled. Trained with an autoregressive objective in both N→C and C→N directions, Dayhoff supports order-agnostic infilling and scales to billions of parameters.
 
@@ -152,14 +152,14 @@ Weights are available for the following models, as described in the [paper](aka.
 
 ### 170M parameter models
 * **Dayhoff-170m-UR50**: A 170M parameter model trained on UniRef50 cluster representatives
-* **Dayhoff-170m-UR90**: A 170M parameter model trained on members sampled from UniRef90 clusters
+* **Dayhoff-170m-UR90**: A 170M parameter model trained on UniRef90 members sampled by UniRef50 cluster
 * **Dayhoff-170m-GR** : A 170M parameter model trained on members sampled from GigaRef clusters
 * **Dayhoff-170m-BRu**: A 170M parameter model trained on UniRef50 cluster representatives and samples from unfiltered BackboneRef
 * **Dayhoff-170m-BRq**: A 170M parameter model trained on UniRef50 cluster representatives and samples from quality-filtered BackboneRef
 * **Dayhoff-170m-BRn**: A 170M parameter model trained on UniRef50 cluster representatives and samples from novelty-filtered BackboneRef
 
 ### 3B parameter models
-* **Dayhoff-3b-UR90**: A 3B parameter model trained on members sampled from UniRef90 clusters
+* **Dayhoff-3b-UR90**: A 3B parameter model trained on UniRef90 members sampled from UniRef50 clusters
 * **Dayhoff-3b-GR-HM**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet
 * **Dayhoff-3b-GR-HM-c**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet and subsequently cooled using samples from UniRef90 clusters and homologs from OpenProteinSet. 
 
@@ -189,14 +189,12 @@ The following scipts were used to conduct analyses described in the paper.
 Generation: 
 * [generate.py](https://github.com/microsoft/dayhoff/blob/main/analysis/generate.py)
 
-Deduplication and clustering:
+Dataset analysis:
 * [clusters.py](https://github.com/microsoft/dayhoff/blob/main/analysis/clusters.py) 
 * [gigaref.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref.py)
 * [gigaref_clusters.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_clusters.py) 
 * [gigaref_singles.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_singles.py)
 * [gigaref_to_jsonl.py](https://github.com/microsoft/dayhoff/blob/main/analysis/gigaref_to_jsonl.py)
-
-Dataset analysis:
 * [create_fasta_sample.py](https://github.com/microsoft/dayhoff/blob/main/analysis/create-fasta-sample.py)
 * [extract_test_fastas.py](https://github.com/microsoft/dayhoff/blob/main/analysis/extract_test_fastas.py)
 * [plot_metrics.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_metrics.py)
@@ -221,7 +219,6 @@ Distributional embedding analysis (via FPD and PNMMD):
 
 Pfam annotation with hmme and taxonomy analysis:
 * [pfam.py](https://github.com/microsoft/dayhoff/blob/main/analysis/pfam.py) 
-* [taxonomy.py](https://github.com/microsoft/dayhoff/blob/main/analysis/taxonomy.py)
 
 DayhoffRef compilation: 
  * [compile_dayhoffref.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_dayhoffref.py)
