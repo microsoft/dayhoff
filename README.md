@@ -159,9 +159,9 @@ Weights are available for the following models, as described in the [paper](http
 * **Dayhoff-170m-BRn**: A 170M parameter model trained on UniRef50 cluster representatives and samples from novelty-filtered BackboneRef
 
 ### 3B parameter models
-* **Dayhoff-3b-UR90**: A 3B parameter model trained on UniRef90 members sampled from UniRef50 clusters
+* **Dayhoff-3b-UR90**: A 3B parameter model trained on UniRef90 members sampled by UniRef50 cluster
 * **Dayhoff-3b-GR-HM**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet
-* **Dayhoff-3b-GR-HM-c**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet and subsequently cooled using samples from UniRef90 clusters and homologs from OpenProteinSet. 
+* **Dayhoff-3b-GR-HM-c**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet and subsequently cooled using samples from UniRef90 and homologs from OpenProteinSet. 
 
 
 ## Unconditional generation
@@ -217,7 +217,7 @@ Distributional embedding analysis (via FPD and PNMMD):
 * [mmd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/mmd.py)
 * [plot_mmd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_mmd.py)
 
-Pfam annotation with hmme and taxonomy analysis:
+Pfam annotation:
 * [pfam.py](https://github.com/microsoft/dayhoff/blob/main/analysis/pfam.py) 
 
 DayhoffRef compilation: 
