@@ -68,26 +68,6 @@ def load_msa_config_and_model(config_fpath):
         )
         block = {type(layer) for layer in model.model.layers}
         causal = True  # must be true for jamba
-    elif config["model_type"] == "msa_transformer":
-        n_layers = config["n_layers"]
-        d_hidden = config["d_hidden"]
-        n_heads = config["n_heads"]
-        d_embed = config["d_embed"]
-        tie_weights = config.get("tie_weights")  # true if not empty
-        config["tie_weights"] = tie_weights  # save
-        model = MSATransformer(
-            d_embed,
-            d_hidden,
-            n_layers,
-            n_heads,
-            use_ckpt=True,
-            n_tokens=n_tokens,
-            padding_idx=tokenizer.pad_id,
-            mask_idx=tokenizer.mask_id,
-            tie_weights=tie_weights,
-        )
-        block = {AxialTransformerLayer}
-        causal = config.get("causal", False)  # true if not empty
     else:
         raise Exception("Unknown model: {}".format(config["model"]))
     aux_loss_weight = config.get("aux_loss_weight", 0.0)
