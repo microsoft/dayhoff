@@ -12,8 +12,6 @@ import torch.distributed as dist
 import torch.distributed.checkpoint as dcp
 import torch.nn as nn
 import wandb
-from esm.modules import AxialTransformerLayer
-from sequence_models.esm import MSATransformer
 from sequence_models.losses import MaskedCrossEntropyLossMSA
 from sequence_models.utils import transformer_lr
 from torch.distributed.checkpoint.state_dict import get_state_dict, set_state_dict
