@@ -1,0 +1,166 @@
+
+rule parent:
+    input:
+        "/data/final/final_seqs.fasta"
+    shell:
+        """
+        echo "Parent rule"
+        """
+
+rule mgnify_db:
+    input: 
+        "/data/mgnify/mgnify.fasta"
+    output: 
+        "/data/mgnify/db/mgnify_db"
+    shell:
+        """
+        mmseqs createdb {input} {output}
+        """
+
+rule mgnify_clu:
+    input: 
+        "/data/mgnify/db/mgnify_db"
+    output: 
+        "/data/mgnify/clu/mgnify_clu"
+    shell:
+        """
+        mmseqs linclust {input} {output} /data/mgnify/tmp --cluster-mode 2 --cov-mode 2 -c 0.8 --min-seq-id 0.7 
+        """
+
+rule mgnify_rep_db
+    input:
+        "/data/mgnify/db/mgnify_db",
+        "/data/mgnify/clu/mgnify_clu"
+    output:
+        "/data/mgnify/clu/mgnify_reps"
+    shell:
+        """ 
+        mmseqs createsubdb {input[1]} {input[0]} {output}
+        """
+
+rule mgnify_reps:
+    input:
+        "/data/mgnify/clu/mgnify_reps"
+    output:
+        "/data/mgnify/clu/mgnify_reps.fasta"
+    shell:
+        """
+        mmseqs convert2fasta {input} {output}
+
+        """
+
+rule merc_src_db:
+    input: 
+        "/data/merc_and_src/merc_src.fasta"
+    output: 
+        "/data/merc_and_src/db/merc_src_db"
+    shell:
+        """
+        mmseqs createdb {input} {output}
+        """
+
+rule merc_src_clu:
+    input:  
+        "/data/merc_and_src/db/merc_src_db"
+    output:
+        "/data/merc_and_src/clu/merc_src_clu"
+    shell:
+        """
+        mmseqs linclust {input} {output} /data/merc_and_src/tmp --cluster-mode 2 --cov-mode 2 -c 0.8 --min-seq-id 0.7
+        """
+
+rule merc_src_rep_db
+    input:
+        "/data/merc_and_src/db/merc_src_db",
+        "/data/merc_and_src/clu/merc_src_clu"
+    output:
+        "/data/merc_and_src/clu/merc_src_reps"
+    shell:
+        """ 
+        mmseqs createsubdb {input[1]} {input[0]} {output}
+        """
+
+rule merc_src_reps:
+    input:
+        "/data/merc_and_src/clu/merc_src_reps"
+    output:
+        "/data/merc_and_src/clu/merc_src_reps.fasta"
+    shell:
+        """
+        mmseqs convert2fasta {input} {output}
+        """
+
+rule concat:
+    input:
+        "/data/merc_and_src/clu/merc_src_reps.fasta",
+        "/data/mgnify/clu/mgnify_reps.fasta",
+        "/data/remainder/remainder.fasta"
+    output:
+        "/data/all/all.fasta"
+    shell:
+        """
+        cat {input[0]} {input[1]} {input[2]} > {output}
+        """
+
+rule all_db:
+    input:
+        "/data/all/all.fasta"
+    output:
+        "/data/all/db/all_db"
+    shell:
+        """
+        mmseqs createdb {input} {output}
+        """
+
+rule all_clu:
+    input:
+        "/data/all/db/all_db"
+    output:
+        "/data/all/clu/all_clu"
+    shell:
+        """
+        mmseqs linclust {input} {output} /data/all/tmp --cluster-mode 2 --cov-mode 2 -c 0.8 --min-seq-id 0.9
+        """
+
+rule all_rep_db:
+    input:
+        "/data/all/db/all_db",
+        "/data/all/clu/all_clu"
+    output:
+        "/data/all/clu/all_reps"
+    shell:
+        """
+        mmseqs createsubdb {input[1]} {input[0]} {output}
+        """
+
+rule final_clu:
+    input:
+        "/data/all/clu/all_reps"
+    output:
+        "/data/final/clu/final_clu"
+    shell:
+        """
+        mmseqs linclust {input} {output} /data/final/tmp --cluster-mode 2 --cov-mode 2 -c 0.8 --min-seq-id 0.5
+        """
+
+rule final_seq_db:
+    input:
+        "/data/all/clu/all_reps",
+        "/data/final/clu/final_clu"
+    output:
+        "/data/final/final_seqs"
+    shell:
+        """
+        mmseqs createseqfiledb {input[0]} {input[1]} {output}
+        """
+
+rule final_seqs:
+    input:
+        "/data/all/clu/all_reps",
+        "/data/final/final_seqs"
+    output:
+        "/data/final/final_seqs.fasta"
+    shell:
+        """
+        mmseqs result2flat {input[0]} {input[0]} {input[1]} {output}
+        """

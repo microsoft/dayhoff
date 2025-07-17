@@ -1,10 +1,10 @@
 # Dayhoff
 
-Dayhoff is an Atlas of both protein sequence data and generative language models — a centralized resource that brings together 3.3 billion protein sequences across 1.7 billion clusters of metagenomic and natural protein sequences (GigaRef), 46 million structure-based synthetic sequences (BackboneRef), and 16 million multiple sequence alignments (OpenProteinSet). These models can natively predict zero-shot mutation effects on fitness, scaffold structural motifs by conditioning on evolutionary or structural context, and perform guided generation of novel proteins within specified families. Learning from metagenomic and structure-based synthetic data from the Dayhoff Atlas increased the cellular expression rates of generated proteins, highlighting the real-world value of expanding the scale, diversity, and novelty of protein sequence data. 
+Dayhoff is an Atlas of both protein sequence data and generative language models — a centralized resource that brings together 3.34 billion protein sequences across 1.7 billion clusters of metagenomic and natural protein sequences (GigaRef), 46 million structure-based synthetic sequences (BackboneRef), and 16 million multiple sequence alignments (OpenProteinSet). These models can natively predict zero-shot mutation effects on fitness, scaffold structural motifs by conditioning on evolutionary or structural context, and perform guided generation of novel proteins within specified families. Learning from metagenomic and structure-based synthetic data from the Dayhoff Atlas increased the cellular expression rates of generated proteins, highlighting the real-world value of expanding the scale, diversity, and novelty of protein sequence data. 
 
 The Dayhoff architecture is a hybrid of state-space Mamba layers and Transformer self-attention, interleaved with Mixture-of-Experts modules to maximize capacity while preserving efficiency. It natively handles long contexts, allowing both single sequences and unrolled MSAs to be modeled. Trained with an autoregressive objective in both N→C and C→N directions, Dayhoff supports order-agnostic infilling and scales to billions of parameters.
 
-If you use the code, data, models, or results. please cite our [preprint](aka.ms/dayhoff/preprint).
+If you use the code, data, models, or results. please cite our [preprint](https://aka.ms/dayhoff/preprint).
 
 <p align="center">
 <img src="img/fig1_schematic.png" />
@@ -99,7 +99,7 @@ The Dayhoff models were trained on the Dayhoff Atlas, with varying data mixes wh
 * _Splits: train (83 GB), test (90 MB), valid (87 MB)_
 
 
-**GigaRef** (**GR**)– 3.3B protein sequences across 1.7B clusters of metagenomic and natural protein sequences. There are two subsets of gigaref:
+**GigaRef** (**GR**)– 3.43B protein sequences across 1.7B clusters of metagenomic and natural protein sequences. There are two subsets of gigaref:
 * **GigaRef-clusters** (**GR**) - Only includes cluster representatives and members, no singletons
     * _Splits: train (433 GB), test (22 MB)_
 * **GigaRef-singletons** (**GR-s**) - Only includes singletons
@@ -148,7 +148,7 @@ For the largest datasets, consider using `streaming=True`.
 
 ## Models
 
-Weights are available for the following models, as described in the [paper](aka.ms/dayhoff/preprint)
+Weights are available for the following models, as described in the [paper](https://aka.ms/dayhoff/preprint)
 
 ### 170M parameter models
 * **Dayhoff-170m-UR50**: A 170M parameter model trained on UniRef50 cluster representatives
@@ -159,9 +159,9 @@ Weights are available for the following models, as described in the [paper](aka.
 * **Dayhoff-170m-BRn**: A 170M parameter model trained on UniRef50 cluster representatives and samples from novelty-filtered BackboneRef
 
 ### 3B parameter models
-* **Dayhoff-3b-UR90**: A 3B parameter model trained on UniRef90 members sampled from UniRef50 clusters
+* **Dayhoff-3b-UR90**: A 3B parameter model trained on UniRef90 members sampled by UniRef50 cluster
 * **Dayhoff-3b-GR-HM**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet
-* **Dayhoff-3b-GR-HM-c**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet and subsequently cooled using samples from UniRef90 clusters and homologs from OpenProteinSet. 
+* **Dayhoff-3b-GR-HM-c**: A 3B parameter model trained on members sampled from GigaRef clusters and homologs from OpenProteinSet and subsequently cooled using UniRef90 members sampled by UniRef50 cluster and homologs from OpenProteinSet.
 
 
 ## Unconditional generation
@@ -217,7 +217,7 @@ Distributional embedding analysis (via FPD and PNMMD):
 * [mmd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/mmd.py)
 * [plot_mmd.py](https://github.com/microsoft/dayhoff/blob/main/analysis/plot_mmd.py)
 
-Pfam annotation with hmme and taxonomy analysis:
+Pfam annotation:
 * [pfam.py](https://github.com/microsoft/dayhoff/blob/main/analysis/pfam.py) 
 
 DayhoffRef compilation: 

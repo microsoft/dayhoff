@@ -1,0 +1,211 @@
+import subprocess
+from tqdm import tqdm
+import os
+
+import pandas as pd
+import glob
+
+# Set of functions to deduplicate Openfold OpenProteinSet with Uniref
+
+
+# --------------------------------------
+# Variables
+# --------------------------------------
+ALIGNMENTS = os.listdir("/data/openfold/scratch/")
+#ALIGNMENTS = ['alignments_1']  # for debugging
+DATA = ['test', 'rtest', 'valid', 'train']
+
+assert DATA[0] ==  'test', "Do not change order of splits, used in split rule"
+assert DATA[1] ==  'rtest', "Do not change order of splits, used in split rule"
+assert DATA[2] ==  'valid', "Do not change order of splits, used in split rule"
+
+
+# --------------------------------------
+# rule all ensures final rule is carried out
+# Need outputs as input
+# --------------------------------------
+rule all:
+    input:
+        expand("/data/openfold/out/{x}_index.csv", x=DATA)
+
+# --------------------------------------
+# make a fasta full of query sequences in each subfile
+# --------------------------------------
+
+for x in ALIGNMENTS: # added to optimize within GCR throttling (otherwise you want to perform in parallel)
+    rule:
+        name: "make_query_index_{x}"
+        input:
+            "/data/openfold/scratch/{x}"
+        output:
+            "/data/openfold/out/{x}/index.fasta",
+            "/data/openfold/intermediate/{x}/reference_filepaths.txt"
+        message: "For each alignment dir, extract query sequences"
+        #threads:1
+        run:
+            MSA_FILES = glob.glob(str(input)+"/*/*.a3m")
+            seqs = []
+            for msa_file in tqdm(MSA_FILES):
+                with open(msa_file, 'r') as file:
+                    for line in file:
+                        line = line.strip()
+                        if not line.startswith('#') and not line.startswith('>'):  # query (first) sequence only
+                            #print(line)
+                            seqs.append(line)
+                            break
+
+            with open(str(output[0]),'w') as w_file, open(str(output[1]),'w') as w_file_2:
+                for i, seq in enumerate(seqs):
+                    w_file.write('>'+MSA_FILES[i]+'\n') # save file location as fasta reference
+                    w_file.write(seq+'\n')
+
+                    w_file_2.write(MSA_FILES[i] + '\n')  # save all file locations for reference when filtering splits
+
+
+# --------------------------------------
+# Files needed for mmseq2 homology search
+# --------------------------------------
+
+rule make_uniref_dbs:
+    input:
+        "/data/intermediate/{data}_consensus.fasta"
+    output:
+        "/data/intermediate/db/{data}_unirefDB"
+    message:
+        "Make DB for uniref test, rtest, and valid splits"
+    shell:
+        """
+        mmseqs createdb {input} {output} --shuffle false 
+        """
+
+rule make_index:
+    input:
+        "/data/intermediate/db/{data}_unirefDB"
+    output:
+        directory("/data/intermediate/db/{data}_uniref_target_index")
+    shell:
+        """
+        mmseqs createindex {input} {output}
+        """
+
+rule cat_files:
+    input:
+        expand("/data/openfold/out/{x}/index.fasta",x=ALIGNMENTS),
+    output:
+        "/data/openfold/out/index.fasta"
+    message: "cat all seqs for one easy search"
+    run:
+        print("out", str(output))
+        with open(str(output), "a") as outfile: # Faster to run mmseqs 1x on all seqs
+            for f in input:
+                print(f)
+                with open(str(f),"r") as infile:
+                    outfile.write(infile.read())
+
+
+rule cat_ref_files:
+    input:
+        expand("/data/openfold/intermediate/{x}/reference_filepaths.txt",x=ALIGNMENTS),
+    output:
+        "/data/openfold/intermediate/reference_filepaths.txt"
+    message: "cat all seqs for one easy search"
+    run:
+        print("out", str(output))
+        with open(str(output), "a") as outfile: # Faster to run mmseqs 1x on all seqs
+            for f in input:
+                print(f)
+                with open(str(f),"r") as infile:
+                    outfile.write(infile.read())
+
+rule easy_search:
+    input:
+        "/data/openfold/out/index.fasta",
+        "/data/intermediate/db/{data}_unirefDB",
+        "/data/intermediate/db/{data}_uniref_target_index"
+    output:
+        "/data/intermediate/db/{data}_report.m8"
+    message:
+        "Run search between each uniref splits and query index fasta file"
+    run:
+
+
+        subprocess.run(['mmseqs', 'easy-search',
+                    str(input[0]),
+                    str(input[1]),
+                    str(output),
+                    str(input[2]),
+                    '-s', '1',
+                    '--format-output', 'query,target,raw,pident,nident,qlen,alnlen',
+                    '--cov-mode', '2',
+                    '-c', '0.8'])
+
+# --------------------------------------
+# Create a dedup index
+# --------------------------------------
+
+rule split:
+    input:
+        "/data/intermediate/db/rtest_report.m8",
+        "/data/intermediate/db/test_report.m8",
+        "/data/intermediate/db/valid_report.m8",
+        "/data/openfold/intermediate/reference_filepaths.txt"
+    output:
+        "/data/openfold/out/rtest_index.csv",
+        "/data/openfold/out/test_index.csv",
+        "/data/openfold/out/valid_index.csv",
+        "/data/openfold/out/train_index.csv"
+    message:
+        "Create a df that contains homology duplicates between query sequences and uniref50"
+    run:
+        threshold = 50 # pidentity threshold
+        data_names = ['rtest', 'test', 'valid']
+
+        df_rt = pd.read_csv(str(input[0]), header=None, delimiter='\t')[[0,3]]
+        df_t = pd.read_csv(str(input[1]), header=None, delimiter='\t')[[0,3]]
+        df_v = pd.read_csv(str(input[2]), header=None, delimiter='\t')[[0,3]]
+        dfs = [df_rt, df_t, df_v]
+
+        for i, df in enumerate(dfs):
+            split_name = data_names[i]
+            df.columns = ['qname', split_name]
+            # dfs can have many multiple matches to sets of uniref sequences - keep highest match for sorting
+            df = df[df[split_name] >= threshold]  # drop anything below threshold
+            # keep highest pident to each query
+            df = df.sort_values(split_name, ascending=False)
+            df = df.drop_duplicates(subset=['qname'], keep="first")
+            df = df.set_index('qname')
+            dfs[i] = df
+
+        # Combine all datasets
+        df_merge = dfs[0].join(dfs[1])
+        df_merge = df_merge.join(dfs[2])
+        # Assign split based on pidentity
+        df_merge['split'] = df_merge.idxmax(axis=1)
+
+        # Count rtest/test/valid splits
+        df_merge_files = list(df_merge.index)
+        df_merge_splits = list(df_merge.split.values)
+        split_dict = {i: df_merge_splits.count(i) for i in df_merge_splits}
+        print(split_dict)
+
+        # Save splits to files
+        for i, split_name in enumerate(data_names):
+            df = df_merge[df_merge['split'] == split_name]
+            print(split_name, len(df))
+            dict = {'path': list(df.index)}
+            df = pd.DataFrame(dict)
+            df.to_csv(str(output[i]))
+
+        with open(input[3]) as file:
+            filepaths = [line.rstrip() for line in file]
+        # ensure no duplicate files indexed
+        #duplicates = [print("dup found in filepaths", k) for k, v in Counter(filepaths).items() if v > 1]
+
+        # Drop everything in rtest/test/val
+        df_all = pd.DataFrame(filepaths, columns=['qname'])
+        df_all = df_all[~(df_all['qname'].isin(df_merge_files))]
+        print("train", len(df_all))
+
+        dict = {'path': list(df_all.qname.values)}
+        df = pd.DataFrame(dict)
+        df.to_csv(str(output[3]))

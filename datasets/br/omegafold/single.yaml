@@ -1,0 +1,41 @@
+target:
+  service: sing
+  # run "amlt target list aml" to list the names of available AML targets
+  name: msrresrchvc
+  workspace_name: biomlinterns2024
+  resource_group: gcr-singularity-resrch
+
+  # name: msrresrchlab
+  # workspace_name: biomlinterns2024
+  # resource_group: gcr-singularity-lab
+
+
+environment:
+  image: alexjlee/ofold:latest
+  username: biomlinterns2024cr
+  registry: biomlinterns2024cr.azurecr.io
+  image_setup:
+    - echo "bye"
+
+code:
+  # $CONFIG_DIR is expanded to the directory of this config file
+  local_dir: /home/t-leea/project/protprune/scripts
+
+storage:
+  data:
+    storage_account_name: alexleecold
+    container_name: amulet
+    mount_dir: /mnt/data/
+
+job:
+  name: "{experiment_name:s}_{auto:3s}"
+  sku: G1-A100 # 32 gb 16 cores
+  #sku: 10C3
+  priority: high
+  process_count_per_node: 1
+  command:
+  #- echo {dirname} >> /mnt/data/alexleecold/foldseek_finished_backbones.txt
+  #- python pmpnn_cdesign.py --directory {dirname} --output_fasta /mnt/data/alexleecold/pmpnn_results/0dot1/{dirname}.fasta --temperature 0.1 --num_seqs 10
+  #- touch /mnt/data/alexleecold/pmpnn_results/0dot1/done/{dirname}
+  - mkdir /mnt/data/alexleecold/omegafold/0dot1/{dirname}
+  - omegafold --subbatch_size 224 /mnt/data/alexleecold/pmpnn_results/0dot1/{dirname}.fasta /mnt/data/alexleecold/omegafold/0dot1/{dirname}

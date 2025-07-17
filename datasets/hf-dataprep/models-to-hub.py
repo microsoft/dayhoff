@@ -1,4 +1,5 @@
 import argparse
+import logging 
 import os
 import shutil
 
@@ -7,7 +8,6 @@ import torch.distributed as dist
 from dotenv import load_dotenv
 from huggingface_hub import HfApi, ModelCard, login
 
-from dayhoff import logger
 from dayhoff.tokenizers import ProteinTokenizer
 from dayhoff.utils import (
     HF_MODEL_CARD_TEMPLATE,
@@ -15,6 +15,8 @@ from dayhoff.utils import (
     load_msa_config_and_model,
     seed_everything,
 )
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -30,7 +32,6 @@ WORLD_SIZE = int(os.environ["WORLD_SIZE"])
 DEVICE = torch.device(f"cuda:{RANK}")
 MODEL_NAME = "dayhoff"
 FILE_DIR = os.path.dirname(__file__)
-
 
 def push_to_hub(args: argparse.Namespace) -> None:
     api = HfApi(token=os.environ["HF_TOKEN"])

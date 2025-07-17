@@ -1,0 +1,36 @@
+target:
+  service: sing
+  # run "amlt target list aml" to list the names of available AML targets
+  name: msrresrchvc
+  workspace_name: biomlinterns2024
+  resource_group: gcr-singularity-resrch
+
+environment:
+  image: alexjlee/rfdiff:latest
+  username: biomlinterns2024cr
+  registry: biomlinterns2024cr.azurecr.io
+
+code:
+  # $CONFIG_DIR is expanded to the directory of this config file
+  local_dir: /home/t-leea/project/protprune/scripts
+
+# data:
+#   local_dir: /home/t-leea/checkpoints
+#   remote_dir: alexleecold/rfdiff/checkpoints
+#   data upload is not required for this example
+
+storage:
+  data:
+    storage_account_name: alexleecold
+    container_name: amulet
+    mount_dir: /mnt/data/
+
+# list of jobs to run, we run 2 jobs in this example
+jobs:
+- name: rfdiffusion
+  sku: 32G1-V100
+  process_count_per_node: 2
+  command:
+  - mkdir -p /mnt/data/alexleecold/backbones
+  - find /mnt/data
+  - python gen_rfdiff.py --nb_config /mnt/data/alexleecold/rfdiff/checkpoints/negbin_uniref50.yaml --num 20 --gpu 0 --container '' --checkpoint /mnt/data/alexleecold/rfdiff/checkpoints/Base_ckpt.pt --num_threads 16 --output_directory /mnt/data/alexleecold/backbones/
