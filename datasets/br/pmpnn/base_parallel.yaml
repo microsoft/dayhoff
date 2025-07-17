@@ -1,0 +1,44 @@
+target:
+  service: sing
+  name: msrresrchvc
+  workspace_name: biomlinterns2024
+  resource_group: gcr-singularity-resrch
+
+environment:
+  image: alexjlee/colabdesign_jaxgpu:latest
+  username: biomlinterns2024cr
+  registry: biomlinterns2024cr.azurecr.io
+
+code:
+  # $CONFIG_DIR is expanded to the directory of this config file
+  local_dir: /home/t-leea/project/protprune/scripts
+
+storage:
+  data:
+    storage_account_name: alexleecold
+    container_name: amulet
+    mount_dir: /mnt/data/
+
+search:
+  job_template:
+    name: "{experiment_name:s}_{auto:3s}"
+    sku: 8C7
+    priority: high
+    process_count_per_node: 1
+    command:
+    - mkdir -p /mnt/data/alexleecold/pmpnn_results_u50length/{temperature}/done
+    - python pmpnn_cdesign.py --directory /mnt/data/alexleecold/backbones_u50length/{dirname} --output_fasta /mnt/data/alexleecold/pmpnn_results_u50length/{temperature}/{dirname}.fasta --temperature {temperature} --num_seqs 10
+    - touch /mnt/data/alexleecold/pmpnn_results_u50length/{temperature}/done/{dirname}
+    - sleep 30s
+    submit_args:
+      env:
+        SHARED_MEMORY_PERCENT: 0.1
+        CUDA_VISIBLE_DEVICES: ""
+        JAX_PLATFORMS: "cpu"
+  type: grid
+  max_trials: 400
+  params:
+    - name: dirname
+      values: ['20240810122_mcz2','202408101759_mj8X','202408101946_JehM','202408101946_YPnu','202408102045_dQqr',]
+    - name: temperature
+      values: [0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0]

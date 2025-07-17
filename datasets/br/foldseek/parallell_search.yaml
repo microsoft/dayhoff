@@ -1,0 +1,47 @@
+target:
+  service: sing
+  # run "amlt target list aml" to list the names of available AML targets
+  name: msrresrchvc
+  workspace_name: biomlinterns2024
+  resource_group: gcr-singularity-resrch
+
+environment:
+  image: alexjlee/fs:latest
+  username: biomlinterns2024cr
+  registry: biomlinterns2024cr.azurecr.io
+  image_setup:
+    - echo "Setup!"
+    - echo "Doing somehting!"
+  # - . setup.sh
+
+# code:
+#   # $CONFIG_DIR is expanded to the directory of this config file
+#   local_dir: /home/t-leea/project/
+#   ignore: 
+#     - prodata/scripts/tools/foldseek/*
+#     - plm
+#     - RFdiffusion
+
+# data:
+#   local_dir: /data/uniref50_202401
+#   remote_dir: uniref50_202401
+
+storage:
+  data:
+    storage_account_name: alexleecold
+    container_name: amulet
+    mount_dir: /mnt/data/
+  fseek:
+    storage_account_name: alexleecold
+    container_name: foldseek
+    mount_dir: /mnt/foldseekdb/
+
+jobs:
+- name: foldseek  
+  sku: 8C60
+  priority: high
+  process_count_per_node: 1
+  command:
+  #- /usr/local/bin/entrypoint easy-search /mnt/data/omegafold/best_syn_rmsd/0.1 /mnt/foldseekdb/afdb50/afdb50 /mnt/data/alexleecold/omegafold/best-fit-seqs_search.m8 /tmp --format-output "query,target,alntmscore,qtmscore,ttmscore,lddt,prob,evalue,bits"
+  - /usr/local/bin/entrypoint easy-search /mnt/data/alexleecold/pdbs/foldseek_140316_tosearch /mnt/foldseekdb/afdb50/afdb50 /mnt/data/alexleecold/omegafold/best-fit-seqs_search_140k.m8 /tmp --format-output "query,target,alntmscore,qtmscore,ttmscore,lddt,prob,evalue,bits"
+  - sleep 1m

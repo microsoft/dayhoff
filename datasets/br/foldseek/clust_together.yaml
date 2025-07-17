@@ -1,0 +1,32 @@
+target:
+  service: sing
+  # run "amlt target list aml" to list the names of available AML targets
+  name: msrresrchvc
+  workspace_name: biomlinterns2024
+  resource_group: gcr-singularity-resrch
+
+environment:
+  image: alexjlee/fs:latest
+  username: biomlinterns2024cr
+  registry: biomlinterns2024cr.azurecr.io
+
+storage:
+  data:
+    storage_account_name: alexleecold
+    container_name: amulet
+    mount_dir: /mnt/data/
+  fseek:
+    storage_account_name: alexleecold
+    container_name: foldseek
+    mount_dir: /mnt/foldseekdb/
+
+jobs:  
+- name: "cluster_pdb"
+  #sku: 8C60 # 32 gb 16 cores
+  #sku: 8C30
+  sku: 8C60
+  #sku: 10C3
+  priority: high
+  process_count_per_node: 1
+  command:
+  - /usr/local/bin/entrypoint easy-cluster /mnt/data/alexleecold/pdbs/scRMSD_best_240k_plus_pdbFirst /mnt/data/alexleecold/clustering_experiments/pdb_plus_240k/scRMSD_best_240k_plus_pdbFirst_default_ /tmp
