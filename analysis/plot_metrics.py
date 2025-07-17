@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import numpy as np
 
 model_order = [
     '170m-uniref50',
@@ -446,7 +447,7 @@ melted = dfe.melt(id_vars=['model_name', 'Fraction expressed'], value_vars=['UR5
 fig, ax = plt.subplots(1, 1)
 pal = sns.color_palette()
 _ = sns.scatterplot(data=melted, x='value', y='Fraction expressed', hue='variable', style='variable',
-                    ax=ax, palette=[pal[4], pal[7]], s=100)
+                    ax=ax, palette=[pal[7], pal[4]], s=100)
 _ = ax.set_xlabel("Perplexity")
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles=handles[:], labels=labels[:]) # This gets rid of the title
@@ -467,7 +468,7 @@ melted = dfe.melt(id_vars=['model_name', 'Fraction expressed'], value_vars=['FPD
 fig, ax = plt.subplots(1, 1)
 pal = sns.color_palette()
 _ = sns.scatterplot(data=melted, x='value', y='Fraction expressed', hue='variable', style='variable',
-                    ax=ax, palette=[pal[4], pal[7]], s=100)
+                    ax=ax, palette=[pal[7], pal[4]], s=100)
 _ = ax.set_xlabel("FPD")
 handles, labels = ax.get_legend_handles_labels()
 ax.legend(handles=handles[:], labels=labels[:]) # This gets rid of the title

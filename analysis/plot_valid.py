@@ -32,7 +32,11 @@ for model in models:
                 out_file = os.path.join(out_fpath, "valid_" + model + '_' + str(checkpoint) + "_" + "uniref" + "_" + direction + "_%d.pt" %rank)
                 try:
                     dat = torch.load(out_file)
-                    ces.append(dat["ce"])
+                    if '3b' in model and direction == 'forward' and checkpoint == 43300:
+                        ces.append(dat["ce"][::1000])
+                    else:
+                        ces.append(dat["ce"])
+                    print(rank, torch.cat(ces).shape)
                 except(EOFError):
                     continue
             ces = torch.cat(ces)
@@ -47,11 +51,12 @@ for model in models:
             # _ = ax1.fill_between(x, ce_by_pos + se_by_pos, ce_by_pos - se_by_pos, alpha=0.3, color=pal[i])
         _ = ax1.set_xlabel('position')
         _ = ax1.set_ylabel('cross-entropy')
+        _ = ax1.set_ylim(0.5, 3)
         _ = ax1.legend()
         ax2 = ax1.twinx()
         n = np.isfinite(ces).sum(axis=0)
         _ = ax2.plot(x, n, "-", color="gray")
-        _ = ax2.set_ylabel('n')
+        _ = ax2.set_ylabel('# of val sequences', rotation=270, labelpad=15)
         _ = fig1.savefig(os.path.join(out_fpath, model + "_" + "uniref" + "_" + direction + ".pdf"), dpi=300, bbox_inches="tight")
 #
 #

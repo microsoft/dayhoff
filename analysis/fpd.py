@@ -104,10 +104,10 @@ for i, s in enumerate(natural_sets):
     for j, s2 in enumerate(natural_sets):
         if i > j:
             ej = pb_embedding_dict[s2]
-            mmd = mmd_rbf(ei[:], ej[:], gamma=pb_gamma) * mult
+            # mmd = mmd_rbf(ei[:], ej[:], gamma=pb_gamma) * mult
             fpd = calculate_fid(ei[:], ej[:], eps=1e-6)
-            print(s, s2, mmd, fpd)
-            pb_mmd_dict[s + ':' + s2] = mmd
+            print(s, s2, fpd)
+            # pb_mmd_dict[s + ':' + s2] = mmd
             pb_fpd_dict[s + ':' + s2] = fpd
 
 rfd_sets = [
