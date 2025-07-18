@@ -1,11 +1,11 @@
 import glob
-from tqdm import tqdm
 import os
-import pandas as pd
-import numpy as np
-from sequence_models.utils import parse_fasta
 import subprocess
 from multiprocessing.pool import ThreadPool
+
+import pandas as pd
+from sequence_models.utils import parse_fasta
+from tqdm import tqdm
 
 
 def make_uniref_fasta_splits(alignments):
