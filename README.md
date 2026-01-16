@@ -12,6 +12,7 @@ If you use the code, data, models, or results. please cite our [preprint](https:
 
 ## Table of Contents
 * [Dayhoff](#Dayhoff)
+* [Usage](#Usage)
 * [Installation](#Installation)
 * [Data and Model availability](#Data-and-model-availability)
     * [Datasets](#Datasets)
@@ -29,13 +30,18 @@ If you use the code, data, models, or results. please cite our [preprint](https:
 * [Contributing](#Contributing)
 * [Trademarks](#Trademarks)
 
+## Usage
 
-## Installation
+The simplest way to use these models and datasets is via the HuggingFace interface. Alternately, you can install this package or use our Docker. Either way, you will need PyTorch, mamba=ssm, causal-conv1d, and flash-attn. 
+
+**Prerequisites**
+
 **Requirements**: 
 * PyTorch: 2.7.1
 * CUDA 12.8 and above
 
 We recommend using [uv](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer) and creating a clean environment.  
+
 
 ```bash
 uv venv dayhoff 
@@ -53,6 +59,33 @@ Now, we need to install mamba-ssm, flash-attn, causal-conv1d, and their prerequi
 uv pip install wheel packaging
 uv pip install --no-build-isolation flash-attn causal-conv1d mamba-ssm
 ```
+
+To import from HuggingFace, you will need to install these versions: 
+
+```bash
+uv pip install datasets==3.2.0 #for HF datasets
+uv pip install transformers==4.51.0
+uv pip install huggingface_hub~=0.34.4
+```
+
+Now, you can simply import the models or datasets into your code. 
+
+```python
+from transformers import SuppressTokensLogitsProcessor
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
+from datasets import load_dataset
+
+model = AutoModelForCausalLM.from_pretrained('microsoft/Dayhoff-3b-GR-HM-c')
+tokenizer = AutoTokenizer.from_pretrained('microsoft/Dayhoff-3b-GR-HM-c',
+                                          trust_remote_code=True)
+
+gigaref_clustered_train = load_dataset("microsoft/DayhoffDataset",
+                  name="gigaref_no_singletons",
+                  split="train")
+```
+
+## Installation
+
 Now, we can either install from pypi:
 
 ```bash
