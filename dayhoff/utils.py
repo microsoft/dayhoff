@@ -199,7 +199,6 @@ def get_logger():
     logger.addHandler(console_handler)
 
     # Example usage
-    logger.info("This is an info message.")
     return logger
 
 
