@@ -2,7 +2,7 @@
 
 Dayhoff is an Atlas of both protein sequence data and generative language models — a centralized resource that brings together 3.34 billion protein sequences across 1.7 billion clusters of metagenomic and natural protein sequences (GigaRef), 46 million structure-based synthetic sequences (BackboneRef), and 16 million multiple sequence alignments (OpenProteinSet). These models can natively predict zero-shot mutation effects on fitness, scaffold structural motifs by conditioning on evolutionary or structural context, and perform guided generation of novel proteins within specified families. Learning from metagenomic and structure-based synthetic data from the Dayhoff Atlas increased the cellular expression rates of generated proteins, highlighting the real-world value of expanding the scale, diversity, and novelty of protein sequence data. 
 
-The Dayhoff model architecture combines state-space Mamba layers with Transformer self-attention, interleaved with Mixture-of-Experts modules to maximize capacity while preserving efficiency. It natively handles long contexts, allowing both single sequences and unrolled MSAs to be modeled. Trained with an autoregressive objective in both N→C and C→N directions, Dayhoff supports order-agnostic infilling and scales to billions of parameters.
+The Dayhoff architecture is a hybrid of state-space Mamba layers and Transformer self-attention, interleaved with Mixture-of-Experts modules to maximize capacity while preserving efficiency. It natively handles long contexts, allowing both single sequences and unrolled MSAs to be modeled. Trained with an autoregressive objective in both N→C and C→N directions, Dayhoff supports order-agnostic infilling and scales to billions of parameters.
 
 If you use the code, data, models, or results. please cite our [preprint](https://aka.ms/dayhoff/preprint).
 
@@ -12,6 +12,7 @@ If you use the code, data, models, or results. please cite our [preprint](https:
 
 ## Table of Contents
 * [Dayhoff](#Dayhoff)
+* [Usage](#Usage)
 * [Installation](#Installation)
 * [Data and Model availability](#Data-and-model-availability)
     * [Datasets](#Datasets)
@@ -29,47 +30,76 @@ If you use the code, data, models, or results. please cite our [preprint](https:
 * [Contributing](#Contributing)
 * [Trademarks](#Trademarks)
 
+## Usage
+
+The simplest way to use these models and datasets is via the HuggingFace interface. Alternately, you can install this package or use our Docker. Either way, you will need PyTorch, mamba=ssm, causal-conv1d, and flash-attn. 
+
+**Prerequisites**
+
+**Requirements**: 
+* PyTorch: 2.7.1
+* CUDA 12.8 and above
+
+We recommend using [uv](https://docs.astral.sh/uv/getting-started/installation/#standalone-installer) and creating a clean environment.  
+
+
+```bash
+uv venv dayhoff 
+source dayhoff/bin/activate
+```
+
+In that new environment, install PyTorch 2.7.1. 
+```bash
+uv pip install torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu128
+```
+
+Now, we need to install mamba-ssm, flash-attn, causal-conv1d, and their prerequisites. 
+
+```bash
+uv pip install wheel packaging
+uv pip install --no-build-isolation flash-attn causal-conv1d mamba-ssm
+```
+
+To import from HuggingFace, you will need to install these versions: 
+
+```bash
+uv pip install datasets==3.2.0 #for HF datasets
+uv pip install transformers==4.51.0
+uv pip install huggingface_hub~=0.34.4
+```
+
+Now, you can simply import the models or datasets into your code. 
+
+```python
+from transformers import SuppressTokensLogitsProcessor
+from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
+from datasets import load_dataset
+
+model = AutoModelForCausalLM.from_pretrained('microsoft/Dayhoff-3b-GR-HM-c')
+tokenizer = AutoTokenizer.from_pretrained('microsoft/Dayhoff-3b-GR-HM-c',
+                                          trust_remote_code=True)
+
+gigaref_clustered_train = load_dataset("microsoft/DayhoffDataset",
+                  name="gigaref_no_singletons",
+                  split="train")
+```
 
 ## Installation
-**Requirements**: 
-* PyTorch: 2.2 and above (2.7 recommended)
-* CUDA 12.0 and above
-* Optionally install Flash Attention 2 following installation instructions here: https://github.com/Dao-AILab/flash-attention
 
-We recommend creating a clean conda environment with Python 3.10
+Now, we can either install from pypi:
 
 ```bash
-conda create --name dayhoff python=3.10
+uv pip install dayhoff
 ```
 
-In that new environment, install PyTorch, mamba-ssm, and causal-conv1d, then install Dayhoff. Optionally, install Flash Attention 2.
+Or, to be able to run the example scripts, clone the repo and install. 
 
 ```bash
-pip install dayhoff
-
-# For bleeding edge: 
-pip install git+https://github.com/microsoft/dayhoff.git
+git clone https://github.com/microsoft.com/dayhoff.git 
+uv pip install -e .
 ```
 
-**Mamba-ssm and causal-conv1d recommendations** 
 
-It is sometimes challenging to properly install these packages just using pip. The following two errors are common when simply using pip install:
-* packages installed correctly, but when loading models you get "ValueError: Fast Mamba kernels are not available. Make sure they are installed and that the mamba module is on a CUDA device."
-* Package installation of causal-conv1d or mamba-ssm fails during the build
-
-If you encounter any of these errors, try installing using the following commands:
-
-```bash
-git clone https://github.com/Dao-AILab/causal-conv1d.git
-cd causal-conv1d
-git checkout v1.4.0 # current latest version tag
-CAUSAL_CONV1D_FORCE_BUILD=TRUE pip install .
-cd ..
-git clone https://github.com/state-spaces/mamba.git
-cd mamba
-git checkout v2.2.4 # current latest version tag
-CAUSAL_CONV1D_FORCE_BUILD=TRUE CAUSAL_CONV1D_SKIP_CUDA_BUILD=TRUE CAUSAL_CONV1D_FORCE_CXX11_ABI=TRUE pip install --no-build-isolation .
-```
 
 **Docker**
 
@@ -82,9 +112,9 @@ docker run -it samirchar/dayhoff:latest
 
 ## Data and model availability
 
-All Dayhoff models are available on [Azure AI Foundry](https://aka.ms/dayhoff/foundry)
+All Dayhoff models are available on [AzureAIFoundry](https://ai.azure.com/labs)
 
-Additionally, all Dayhoff models are also hosted on [Hugging Face](https://huggingface.co/collections/microsoft/dayhoff-atlas-6866d679465a2685b06ee969) 🤗. All datasets used in the paper, with the exception of OpenProteinSet are available on Hugging Face in three formats: FASTA, Arrow, and JSONL. The PDB files for structures used to generate BackboneRef are available in Parquet format.
+Additionally, all Dayhoff models are also hosted on [Hugging Face](https://huggingface.co/collections/microsoft/dayhoff-atlas-6866d679465a2685b06ee969) 🤗. All datasets used in the paper, with the exception of OpenProteinSet are available on Hugging Face in three formats: FASTA, Arrow, and JSONL. 
 
 GigaRef, BackboneRef, and DayhoffRef are available under [CC BY License](https://creativecommons.org/licenses/by/4.0/)
 
@@ -92,34 +122,34 @@ GigaRef, BackboneRef, and DayhoffRef are available under [CC BY License](https:/
 ### Training datasets
 The Dayhoff models were trained on the Dayhoff Atlas, with varying data mixes which include:  
 
-* **[UniRef50](https://www.uniprot.org/)** (**UR50**) - dataset from UniProt, clustered at 50% sequence identity, contains only cluster representatives.
-    * _Splits: train (25 GB), test (26 MB), valid (26 MB)_
+**[UniRef50](https://www.uniprot.org/)** (**UR50**) - dataset from UniProt, clustered at 50% sequence identity, contains only cluster representatives.
+* _Splits: train (25 GB), test (26 MB), valid (26 MB)_
 
-* **[UniRef90](https://www.uniprot.org/)** (**UR90**) - dataset from UniProt, clustered at 90% sequence identity, contains cluster representatives and members.
-    * _Splits: train (83 GB), test (90 MB), valid (87 MB)_
+**[UniRef90](https://www.uniprot.org/)** (**UR90**) - dataset from UniProt, clustered at 90% sequence identity, contains cluster representatives and members.
+* _Splits: train (83 GB), test (90 MB), valid (87 MB)_
 
 
-* **GigaRef** (**GR**)– 3.43B protein sequences across 1.7B clusters of metagenomic and natural protein sequences. There are two subsets of gigaref:
-    * **GigaRef-clusters** (**GR**) - Only includes cluster representatives and members, no singletons
-        * _Splits: train (433 GB), test (22 MB)_
-    * **GigaRef-singletons** (**GR-s**) - Only includes singletons
-        * _Splits: train (282 GB)_
+**GigaRef** (**GR**)– 3.43B protein sequences across 1.7B clusters of metagenomic and natural protein sequences. There are two subsets of gigaref:
+* **GigaRef-clusters** (**GR**) - Only includes cluster representatives and members, no singletons
+    * _Splits: train (433 GB), test (22 MB)_
+* **GigaRef-singletons** (**GR-s**) - Only includes singletons
+    * _Splits: train (282 GB)_
 
-* **BackboneRef** (**BR**) – 46M structure-derived synthetic sequences from c.a. 240,000 de novo backbones, with three subsets containing 10M sequences each:  
-    * **BackboneRef unfiltered** (**BRu**) – 10M sequences randomly sampled from all 46M designs.  
-        * _Splits: train (3 GB)_
-    * **BackboneRef quality** (**BRq**) – 10M sequences sampled from 127,633 backbones whose average self-consistency RMSD ≤ 2 Å.  
-        * _Splits: train(3 GB)_
-    * **BackboneRef novelty** (**BRn**) – 10M sequences from 138,044 backbones with a max TM-score < 0.5 to any natural structure.  
-        * _Splits: train (3GB)_
+**BackboneRef** (**BR**) – 46M structure-derived synthetic sequences from c.a. 240,000 de novo backbones, with three subsets containing 10M sequences each:  
+* **BackboneRef unfiltered** (**BRu**) – 10M sequences randomly sampled from all 46M designs.  
+    * _Splits: train (3 GB)_
+* **BackboneRef quality** (**BRq**) – 10M sequences sampled from 127,633 backbones whose average self-consistency RMSD ≤ 2 Å.  
+    * _Splits: train(3 GB)_
+* **BackboneRef novelty** (**BRn**) – 10M sequences from 138,044 backbones with a max TM-score < 0.5 to any natural structure.  
+    * _Splits: train (3GB)_
 
-* **[OpenProteinSet](https://arxiv.org/abs/2308.05326)** (**HM**) – 16 million precomputed MSAs from 16M sequences in UniClust30 and 140,000 PDB chains. 
+**[OpenProteinSet](https://arxiv.org/abs/2308.05326)** (**HM**) – 16 million precomputed MSAs from 16M sequences in UniClust30 and 140,000 PDB chains. 
 
 ### DayhoffRef
 Given the potential for generative models to expand the space of proteins and their functions, we used the Dayhoff models to generate DayhoffRef, a PLM-generated database of synthetic protein sequences
 
-* **DayhoffRef**: dataset of 16 million synthetic protein sequences generated by the Dayhoff models: Dayhoff-3b-UR90, Dayhoff-3b-GR-HM, Dayhoff-3b-GR-HM-c, and Dayhoff-170m-UR50-BRn. 
-    * _Splits: train (5 GB)_
+**DayhoffRef**: dataset of 16 million synthetic protein sequences generated by the Dayhoff models: Dayhoff-3b-UR90, Dayhoff-3b-GR-HM, Dayhoff-3b-GR-HM-c, and Dayhoff-170m-UR50-BRn. 
+* _Splits: train (5 GB)_
 
 ### Loading datasets in HuggingFace 
 
@@ -166,20 +196,27 @@ Weights are available for the following models, as described in the [paper](http
 
 ## Unconditional generation
 
-For most cases, use [src/generate.py](https://github.com/microsoft/dayhoff/blob/main/src/generate.py) to generate new protein sequences. Below is a sample code to generate 10 sequence with at most 100 residues:
+For most cases, use [examples/generate.py](https://github.com/microsoft/dayhoff/blob/main/src/generate.py) to generate new protein sequences. Below is a sample command to generate 10 sequences with at most 100 residues and to place them in a fasta file in the directory `generations/`
 
 ```bash
-python src/generate.py --out-dir generations --model 170m-UR50-BBR-n --max-length 100 --n-generations 10 --temp 1.0 --min-p 0.0 --random-seed 1 
+python examples/generate.py generations/ --model-name Dayhoff-170m-UR50-BBR-n --max-length 100 --n-generations 10 --temp 1.0 --min-p 0.0 --random-seed 1 --gpu 0
 ```
 
 ## Homolog-conditioned generation
 
-The [generate_from_homologs](https://github.com/microsoft/dayhoff/blob/main/src/generate_from_homologs.py) script performs sequence generation conditioned on evolutionarily-related homologous sequences modeled as multiple sequence alignments (MSAs)
+[examples/generate.py] includes an option to pass a fasta file, in which case it performs sequence generation conditioned on the sequences in the fasta file. The order of the conditioning sequences will be randomly shuffled for each generation. 
 
-The following code specifies the folder where MSAs in fasta format are stored and selects two specific MSAs for conditional generation. The list of MSAs within the MSAs dir can also be specified via an --include-pattern argument.
 
 ```bash
-python src/generate_from_homologs.py --model 3b-GGR-MSA --msas-dir MSAs --task sequence --out-dir generations --msa-file-names 100220484.fasta 10123434.fasta --temp 1.0 --min-p 0.0 --max-length 768 --random-seed 1 
+python examples/generate.py generations/ --fasta-file example.fasta --model-name Dayhoff-3b-GR-HM-c --max-length 128 --n-generations 10 --temp 1.0 --min-p 0.0 --random-seed 1 --gpu 0
+```
+
+## Zero-shot fitness scoring
+
+[examples/score.py] will compute backwards and forward average log likelihoods for every sequence in a fasta file. 
+
+```bash
+python examples/score.py example.fasta output_dir/ --model-name Dayhoff-3b-GR-HM-c  --gpu 0
 ```
 
 ## Analysis scripts
@@ -238,8 +275,8 @@ Evolution guided generation:
 * [reorg_msas.py](https://github.com/microsoft/dayhoff/blob/main/analysis/reorg_msas.py)
 
 Cas9 evals: 
-* [generate_cas9.py](https://github.com/microsoft/dayhoff/blob/main/analysis/generate_cas9.py)
-* [compile_cas9_fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_cas9_fidelity.py)
+* [generate_cas9.py](https://github.com/microsoft/dayhoff/blob/main/analysis/generate_cas9.py): 
+* [compile_cas9_fidelity.py](https://github.com/microsoft/dayhoff/blob/main/analysis/compile_cas9_fidelity.py): 
 
 ## Out-of-Scope Use Cases
 

@@ -101,7 +101,7 @@ def main():
     parser.add_argument("--random-seed", type=int, default=0) 
     parser.add_argument("--device", type=int, default=0)
     parser.add_argument("--no-fa2", action="store_true",help="Disable FlashAttention 2")
-    parser.add_argument("--min-p", type=float, default=0.0, help= "Minimum probability for sampling.") 
+    parser.add_argument("--min-p", type=float, default=0.0, help="Minimum probability for sampling.")
 
 
 
@@ -114,3 +114,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
