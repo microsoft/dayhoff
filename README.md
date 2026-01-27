@@ -64,7 +64,7 @@ To import from HuggingFace, you will need to install these versions:
 
 ```bash
 uv pip install datasets==3.2.0 #for HF datasets
-uv pip install transformers==4.51.0
+uv pip install transformers==4.51.3
 uv pip install huggingface_hub~=0.34.4
 ```
 
