@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dayhoff"
-version = "0.0.5"
+version = "0.1.2"
 description = "Python package for generation of protein sequences and evolutionary alignments via discrete diffusion models"
 readme = "README.md"
 requires-python = ">=3.10.16"
@@ -46,7 +46,7 @@ dependencies = [ #TODO: can add optional dependencies
 'scipy~=1.15.2',
 
 #Pytorch
-'transformers~=4.51.0',
+'transformers~=4.51.3',
 'datasets~=3.2.0', #for HF datasets
 # 'causal-conv1d>=1.4.0', #For jamba/mamba
 # 'mamba-ssm~=2.2.4', #For jamba/mamba
