@@ -57,7 +57,7 @@ Now, we need to install mamba-ssm, flash-attn, causal-conv1d, and their prerequi
 
 ```bash
 uv pip install wheel packaging
-uv pip install --no-build-isolation mamba-ssm==2.3.1, flash-attn==2.8.3, causal-conv1d==1.6.0,
+uv pip install --no-build-isolation mamba-ssm==2.3.1 flash-attn==2.8.3 causal-conv1d==1.6.0
 ```
 
 To import from HuggingFace, you will need to install these versions: 
