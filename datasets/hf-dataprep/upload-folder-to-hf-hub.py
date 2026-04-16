@@ -4,6 +4,8 @@ import os.path as osp
 
 from dotenv import load_dotenv
 from huggingface_hub import HfApi, upload_large_folder
+import huggingface_hub
+print(huggingface_hub.__version__)
 
 # SET HF CACHE HOME
 # os.environ["HF_HUB_CACHE"] = "/fastdata/my-hf-cache/"
@@ -63,7 +65,7 @@ def upload_folder_to_hf(folder_path, repo_id, hf_token, repo_type="model", priva
         raise ValueError("repo_mode must be one of 'create', 'replace', or 'append'")
 
     # Now upload the folder contents to the repo.
-    upload_large_folder(
+    api.upload_large_folder(
         folder_path=folder_path,
         repo_id=repo_id,
         repo_type=repo_type,
@@ -133,6 +135,7 @@ if __name__ == "__main__":
         args.folder_path = osp.join(os.environ["AMLT_DATA_DIR"], args.folder_path)
 
     load_dotenv()
+    print(os.environ["HF_TOKEN"])
     upload_folder_to_hf(folder_path = args.folder_path,
                         repo_id = args.repo_id,
                         repo_type = args.repo_type,
