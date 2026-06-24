@@ -12,6 +12,7 @@ If you use the code, data, models, or results. please cite our [preprint](https:
 
 ## Table of Contents
 * [Dayhoff](#Dayhoff)
+* [Quickstart](#quickstart)
 * [Usage](#Usage)
 * [Installation](#Installation)
 * [Data and Model availability](#Data-and-model-availability)
@@ -29,6 +30,17 @@ If you use the code, data, models, or results. please cite our [preprint](https:
 * [Responsible AI](#responsible-ai-considerations)
 * [Contributing](#Contributing)
 * [Trademarks](#Trademarks)
+
+## Quickstart 
+
+See [`examples/dayhoff_quickstart.ipynb`](examples/dayhoff_quickstart.ipynb) for a runnable, end-to-end notebook that loads a small model and demonstrates generation, zero-shot scoring, and dataset loading. 
+> The notebook detects whether a GPU is available and falls back to a CPU/dataset-only path otherwise.
+
+
+For easy setup, we include two setup scripts for use with the notebook: 
+> [`examples/setup_cpu.sh`](examples/setup_cpu.sh) (CPU / dataset-only) or
+> [`examples/setup_gpu.sh`](examples/setup_gpu.sh) (full GPU model path); each builds a conda
+
 
 ## Usage
 
@@ -69,15 +81,6 @@ uv pip install huggingface_hub~=0.34.4
 ```
 
 Now, you can simply import the models or datasets into your code.
-
-> 💡 **New to the repo?** See [`examples/dayhoff_quickstart.ipynb`](examples/dayhoff_quickstart.ipynb)
-> for a runnable, end-to-end notebook that loads a small model and demonstrates generation,
-> zero-shot scoring, and dataset loading. For a one-shot, restart-free setup, run
-> [`examples/setup_cpu.sh`](examples/setup_cpu.sh) (CPU / dataset-only) or
-> [`examples/setup_gpu.sh`](examples/setup_gpu.sh) (full GPU model path); each builds a conda
-> env and registers a Jupyter kernel. The notebook detects whether a GPU is available and
-> falls back to a CPU/dataset-only path otherwise.
-
 
 ```python
 from transformers import SuppressTokensLogitsProcessor
