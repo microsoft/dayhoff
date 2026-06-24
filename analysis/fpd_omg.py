@@ -162,7 +162,7 @@ def main():
                     order=order, hue_order=order, palette=palette, legend=False,
                     width=0.95)
     _ = ax.set_xlabel("")
-    _ = ax.set_ylabel("FPD")
+    _ = ax.set_ylabel("FPD to OMG_prot50")
     sns.despine(ax=ax)
     fig.savefig(args.plot, bbox_inches="tight", dpi=300)
     print("\nSaved bar chart to", args.plot)
