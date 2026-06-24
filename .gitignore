@@ -1,4 +1,0 @@
-data_local/
-__pycache__/
-*.egg-info/
-*.pyc
