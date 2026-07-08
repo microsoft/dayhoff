@@ -110,6 +110,7 @@ model_order = [
     '3b-uniref',
     '3b-msa-gigaclust',
     '3b-msa-uniref90-cooldown',
+    '170m-GRs',
 ]
 
 pal3b = sns.color_palette()
@@ -183,6 +184,13 @@ model_dict = {
         "step": 25000,
         "UR50 perplexity": 10.11,
         "GGR perplexity": 9.21,
+    },
+    '170m-GRs': {
+        "name": "170m-GRs",
+        "hue": sns.color_palette()[6],
+        "step": 112000,
+        "UR50 perplexity": 15.93,
+        "GGR perplexity": 14.45,
     },
     "evodiff": {
         "name": "EvoDiff-seq",
