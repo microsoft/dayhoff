@@ -1,16 +1,19 @@
 import os
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import seaborn as sns
 from tqdm import tqdm
+import json
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 sns.set_theme(font_scale=1.2)
 sns.set_style('white')
 
 gigaref_file = "/data/post_dedup/dedup_clusters.fasta"
+
 out_dir = "/home/kevyan/generations/gigaref_analysis/"
+
 
 
 if not os.path.exists(os.path.join(out_dir, "cluster_compositions.npz")):
@@ -115,7 +118,7 @@ plot_me = pd.DataFrame(plot_me.T, columns=["x", "y"])
 plot_me = plot_me.drop_duplicates()
 plot_me = plot_me.sort_values(by=["x", "y"])
 plot_me['y'] = plot_me['x'] - plot_me['y']
-_ = ax.plot(plot_me.iloc[:]['x'], plot_me.iloc[:]['y'], '.', ms=3, color=pal[4], alpha=0.7, label="Metagenomic only")
+_ = ax.plot(plot_me.iloc[:]['x'], plot_me.iloc[:]['y'], '^', ms=3, color=pal[4], alpha=0.7, label="Metagenomic only")
 _ = ax.set_xlabel('Cluster size')
 _ = ax.set_ylabel('# Metagenomic members')
 _ = ax.legend(loc='upper left')

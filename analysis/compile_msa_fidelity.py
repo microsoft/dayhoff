@@ -2,26 +2,26 @@ import os
 from collections import Counter
 from tqdm import tqdm
 
-import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-import seaborn as sns
+import numpy as np
 from Bio.Align import PairwiseAligner
-from scipy.stats import pearsonr
 from scipy.stats import ttest_rel
-
 from dayhoff.analysis_utils import results_to_pandas, get_all_paths, run_tmscore
 from sequence_models.utils import parse_fasta
-from dayhoff.analysis_utils import get_all_paths, results_to_pandas, run_tmscore
 
+import matplotlib.pyplot as plt
+import seaborn as sns
 sns.set_theme(font_scale=1.2)
 sns.set_style('white')
 
 base_path = "/home/kevyan/generations/queries_from_homologs"
 
 models = ["natural", "xlstm", "evodiff", "evodiff_nom",
+          # "gap_1.0_0.01", "gap_1.2_0.01", "gap_1.0_0.00", "gap_1.1_0.05", "gap_1.0_0.00_nom",
           "gap_1.0_0.05_nom",
           "ccmgen",
+          # "ccmgen_short",
+          # "indel_1.0_0.00", "indel_1.2_0.01", "indel_1.0_0.01", "indel_1.1_0.05", "indel_1.0_0.00_nom",
           "indel_1.0_0.05_nom"]
 raw_dfs = []
 for m in models:
@@ -204,7 +204,8 @@ for cdf in cdfs:
 
 fig, ax = plt.subplots()
 _ = sns.scatterplot(df[df['model'].isin(["natural", "gap_1.0_0.05_nom", "indel_1.0_0.05_nom"])], x="plddt", y='perplexity', hue='model',
-                    palette=model_to_hue, ax=ax, alpha=0.7)
+                    palette=model_to_hue, ax=ax, alpha=0.7, 
+                    style='model')
 _ = ax.set_xlabel('pLDDT')
 _ = ax.set_ylabel('scPerplexity')
 leg = ax.get_legend()
